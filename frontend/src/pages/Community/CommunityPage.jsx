@@ -56,6 +56,7 @@ export default function CommunityPage() {
   const [saving, setSaving] = useState({});
   const [toast, setToast] = useState(null);
   const [viewingPost, setViewingPost] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const fileInputRef = useRef(null);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
@@ -124,8 +125,7 @@ export default function CommunityPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta publicación?')) return;
-    try { await api.deletePost(id); loadPosts(); } catch (e) { showToast('Error al eliminar'); }
+    try { await api.deletePost(id); loadPosts(); setDeleteConfirm(null); } catch (e) { showToast('Error al eliminar'); setDeleteConfirm(null); }
   };
 
   return (
@@ -182,7 +182,7 @@ export default function CommunityPage() {
                 <p className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
               </div>
               {user && post.user_name === user.name && (
-                <button onClick={e => { e.stopPropagation(); handleDelete(post.id); }} className="p-1 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0">
+                <button onClick={e => { e.stopPropagation(); setDeleteConfirm(post.id); }} className="p-1 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0">
                   <span className="material-symbols-outlined text-sm">delete</span>
                 </button>
               )}
@@ -257,6 +257,18 @@ export default function CommunityPage() {
         ))}
       </div>
 
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
+            <p className="text-lg font-bold mb-6">¿Eliminar esta publicación?</p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setDeleteConfirm(null)} className="neo-btn !py-2 !px-6 !text-sm">Cancelar</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="neo-btn !py-2 !px-6 !text-sm !bg-red-500 !text-white !border-red-600 hover:!bg-red-600">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {viewingPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setViewingPost(null)}>
           <div className="absolute inset-0 bg-black/40" />
