@@ -1,16 +1,9 @@
 import { NavLink } from 'react-router-dom';
-
-const navItems = [
-  { path: '/meals', icon: 'today', label: 'Menús' },
-  { path: '/pantry', icon: 'kitchen', label: 'Despensa' },
-  { path: '/scanner', icon: 'document_scanner', label: 'Escaner' },
-  { path: '/community', icon: 'forum', label: 'Comunidad' },
-  { path: '/profile', icon: 'account_circle', label: 'Perfil' },
-];
+import { navItems } from './navConfig';
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-black z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-black z-50 md:hidden">
       <div className="max-w-lg mx-auto flex items-center justify-around px-2 py-1">
         {navItems.map(item => (
           <NavLink
