@@ -379,7 +379,7 @@ export default function ScannerPage() {
               </p>
             </div>
           ) : (
-            <div className="relative -mx-4 rounded-none overflow-hidden border-0 bg-black mb-4" style={{ height: 'calc(100vh - 140px)' }}>
+            <div className="relative -mx-4 rounded-none overflow-hidden border-0 bg-black mb-4" style={{ height: 'calc(100vh - 220px)' }}>
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
               <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center">
                 <button onClick={capturePhoto} className="w-20 h-20 rounded-full border-[5px] border-white bg-white/20 flex items-center justify-center hover:bg-white/30 active:scale-90 transition-all">
