@@ -1,4 +1,5 @@
 const express = require('express');
+const Tesseract = require('tesseract.js');
 const supabase = require('../lib/supabase');
 const { create, updateById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
@@ -11,40 +12,18 @@ router.post('/process-ticket', async (req, res) => {
     const { image, media_type } = req.body;
     if (!image) return res.status(400).json({ error: 'Imagen requerida' });
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API key de Anthropic no configurada. Configura ANTHROPIC_API_KEY en el entorno.' });
-    }
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: media_type || 'image/jpeg', data: image } },
-            { type: 'text', text: 'Extrae los productos de este ticket de compra. Devuelve SOLO un JSON válido sin markdown ni texto extra con esta estructura exacta: {"items":[{"name":"nombre del producto","quantity":1,"unit":"kg","category":"proteina"}]}. Categorías permitidas: proteina, carbohidrato, verdura, fruta, lacteo, grasa, otro.' }
-          ]
-        }]
-      })
+    const buffer = Buffer.from(image, 'base64');
+    const { data: { text } } = await Tesseract.recognize(buffer, 'spa+eng', {
+      langPath: process.env.TESSDATA_PATH || undefined,
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(500).json({ error: data.error?.message || 'Error al procesar con Claude' });
-    }
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const ignored = /total|iva|efectivo|cambio|tarjeta|cuenta|gracias|ticket|factura|euro|€|\d+[,.]\d{2}/i;
+    const items = lines.filter(l => !ignored.test(l) && l.length > 2 && /[a-záéíóúñ]/i.test(l))
+      .map(name => ({ name, quantity: 1, unit: 'unidad', category: 'otro' }))
+      .slice(0, 30);
 
-    const text = data.content?.[0]?.text || '';
-    let clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
-    const parsed = JSON.parse(clean);
-    res.json(Array.isArray(parsed.items) ? parsed : { items: [] });
+    res.json({ items });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
