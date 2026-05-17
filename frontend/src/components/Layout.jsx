@@ -48,9 +48,9 @@ export default function Layout() {
               </div>
               <span className="font-extrabold text-lg text-gray-900 dark:text-white">CookIt</span>
             </Link>
-            <div className="hidden md:flex items-center gap-2">
+            <Link to="/meals" className="hidden md:flex items-center gap-2">
               <span className="font-extrabold text-lg text-gray-900 dark:text-white">CookIt</span>
-            </div>
+            </Link>
             <Link to="/profile" className="flex items-center gap-2 md:hidden">
               <AvatarIcon user={user} />
             </Link>
