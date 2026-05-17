@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { createWorker } from 'tesseract.js';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 const categoryOptions = ['proteina', 'carbohidrato', 'verdura', 'fruta', 'lacteo', 'grasa', 'otro'];
@@ -18,12 +19,102 @@ const SUGGESTED_MEALS = [
   { name: 'Sopa de verduras', recipe: 'Sopa de verduras', ingredients: ['Zanahoria', 'Apio', 'Cebolla', 'Papa', 'Caldo de verduras'], instructions: '1. Corta todas las verduras en cubos.\n2. Sofríe la cebolla.\n3. Agrega el resto de verduras y caldo.\n4. Cocina 30 min y sirve caliente.' },
 ];
 
+const FOOD_DICT = [
+  'agua', 'aceite', 'arroz', 'azúcar', 'ajo', 'avena', 'atún', 'aceituna', 'almendra',
+  'brocoli', 'brócoli', 'berenjena', 'boniato', 'batata', 'burrito',
+  'cerveza', 'coca-cola', 'café', 'cacao', 'canela', 'cebolla', 'calabacín', 'calabaza',
+  'champinon', 'champiñón', 'chocolate', 'chorizo', 'carne', 'cordero', 'conejo', 'cereales',
+  'durazno', 'dorito', 'donut',
+  'espinaca', 'espárrago', 'ensalada', 'endulzante', 'edulcorante', 'embutido',
+  'fresa', 'frijol', 'fruta', 'fideo', 'flan',
+  'garbanzo', 'galleta', 'gaseosa', 'guisante', 'gelatina', 'germen', 'granola',
+  'huevo', 'harina', 'hummus', 'helado',
+  'jamón', 'jamon', 'judía', 'judia',
+  'kétchup', 'ketchup',
+  'leche', 'lenteja', 'limón', 'limon', 'lechuga', 'lata', 'langostino', 'lomo',
+  'manzana', 'mango', 'mandarina', 'mantequilla', 'maíz', 'maiz', 'merluza', 'miel',
+  'naranja', 'nuez', 'nabo',
+  'pan', 'papa', 'patata', 'pasta', 'pera', 'pescado', 'pimiento', 'pollo', 'plátano',
+  'platano', 'puerro', 'pavo', 'pepino', 'piña', 'pizza', 'palomita',
+  'queso', 'quinoa', 'rábano', 'rábano',
+  'salmón', 'salmon', 'sal', 'salsa', 'sandía', 'sandia', 'soja', 'sopa', 'sardina',
+  'tomate', 'tortilla', 'tostada', 'taco', 'té', 'te', 'trucha',
+  'uva', 'yogur', 'yogurt', 'yuca', 'zanahoria', 'zumo'
+];
+
 const matchIngredients = (itemNames, mealIngredients) => {
   const lowerItems = itemNames.map(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   return mealIngredients.filter(ing => {
     const lowerIng = ing.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return lowerItems.some(item => item.includes(lowerIng) || lowerIng.includes(item));
   });
+};
+
+const looksLikeTicket = (text) => {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return false;
+  let priceLines = 0;
+  let shortLines = 0;
+  for (const line of lines) {
+    const clean = line.replace(/\s+/g, ' ').trim();
+    if (clean.match(/[\d.,]+\s*[€Ee]?\s*$/)) priceLines++;
+    if (clean.length < 3) shortLines++;
+  }
+  return priceLines >= 2 && shortLines < lines.length * 0.5;
+};
+
+const isGarbage = (text) => {
+  const cleanLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (cleanLines.length === 0) return true;
+  const shortCount = cleanLines.filter(l => l.length < 3).length;
+  const noVowelCount = cleanLines.filter(l => !/[aeiouáéíóú]/i.test(l)).length;
+  return shortCount > cleanLines.length * 0.3 || noVowelCount > cleanLines.length * 0.5;
+};
+
+const parseTicketText = (text) => {
+  const lines = text.split('\n').filter(l => l.trim());
+  const items = [];
+  const seen = new Set();
+
+  for (const line of lines) {
+    const clean = line.replace(/\s+/g, ' ').trim();
+    const priceMatch = clean.match(/([\d.,]+)\s*[€Ee]?\s*$/);
+    if (!priceMatch) continue;
+    const rawPrice = priceMatch[1].replace(/\./g, '').replace(',', '.');
+    const price = parseFloat(rawPrice);
+    if (isNaN(price) || price <= 0 || price > 9999) continue;
+    let name = clean.substring(0, clean.indexOf(priceMatch[0])).trim();
+    if (!name || name.length < 2) continue;
+    name = name.replace(/^\d+\s*/, '');
+    name = name.replace(/\s*\*+\s*$/, '').trim();
+    if (!name || name.length < 2) continue;
+    const lower = name.toLowerCase();
+    if (['total', 'subtotal', 'iva', 'base', 'efectivo', 'tarjeta', 'cambio', 'gracias', 'ticket',
+      'factura', 'nif', 'cif', 'cliente', 'importe', 'descuento', 'redondo', '€'].some(
+      w => lower.includes(w))) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    let quantity = '1';
+    let unit = 'unidad';
+    const qtyMatch = name.match(/[xX]\s*([\d.,]+)\s*(kg|g|l|ml|ud|unidad|unidades|paq|pack|lata|botella|bolsa|pieza|tarro)?$/i);
+    if (qtyMatch) {
+      quantity = qtyMatch[1].replace(',', '.');
+      name = name.substring(0, name.indexOf(qtyMatch[0])).trim();
+      if (qtyMatch[2]) unit = qtyMatch[2].toLowerCase();
+    } else {
+      const unitMatch = name.match(/([\d.,]+)\s*(kg|g|l|ml|ud|unidad|unidades|paq|pack|lata|botella|bolsa|pieza|tarro)$/i);
+      if (unitMatch) {
+        quantity = unitMatch[1].replace(',', '.');
+        unit = unitMatch[2].toLowerCase();
+        name = name.substring(0, name.indexOf(unitMatch[0])).trim();
+      }
+    }
+    if (name && name.length >= 2) {
+      items.push({ name, quantity, unit, price });
+    }
+  }
+  return items.slice(0, 50);
 };
 
 export default function ScannerPage() {
@@ -40,75 +131,90 @@ export default function ScannerPage() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const fileInputRef = useRef(null);
 
+  const preprocessForOcr = (canvas) => {
+    const w = canvas.width, h = canvas.height;
+    const src = canvas.getContext('2d').getImageData(0, 0, w, h);
+    const data = src.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const gray = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+      const contrast = ((gray - 128) * 1.3) + 128;
+      data[i] = data[i + 1] = data[i + 2] = Math.max(0, Math.min(255, contrast));
+    }
+    const out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    out.getContext('2d').putImageData(src, 0, 0);
+    return out;
+  };
+
+  const cleanWord = (w) => {
+    return w.replace(/[^a-záéíóúñüA-ZÁÉÍÓÚÑÜ0-9]/g, '').trim().toLowerCase();
+  };
+
+  const isLikelyFood = (name) => {
+    const lower = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (lower.length < 2) return false;
+    if (FOOD_DICT.some(f => lower.includes(f))) return true;
+    if (/[aeiou]/i.test(lower) && lower.length >= 3 && !/^[a-z]{1,2}$/i.test(lower)) return true;
+    return false;
+  };
+
   const processImage = async (canvas) => {
     setProcessing(true);
-    setOcrProgress('Analizando ticket con IA...');
+    setOcrProgress('');
     setError('');
     try {
-      const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'CLAVE_API_AQUI',
+      const processed = preprocessForOcr(canvas);
+      let ocrTimedOut = false;
+      const worker = await createWorker('spa', 1, {
+        logger: m => {
+          if (m.status && !ocrTimedOut) setOcrProgress(m.status + (m.progress ? ` ${Math.round(m.progress * 100)}%` : ''));
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: 'image/jpeg', data: base64 }
-              },
-              {
-                type: 'text',
-                text: `Analiza este ticket de supermercado español. Devuelve ÚNICAMENTE un JSON válido, sin texto extra, sin markdown, sin backticks:
-{
-  "productos": [
-    { "nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad", "precio": 1.99 }
-  ]
-}
-Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, dirección o datos del supermercado. Solo productos alimentarios.`
-              }
-            ]
-          }]
-        })
       });
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzáéíóúñüÁÉÍÓÚÑÜ0123456789.,/€- ',
+      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => { ocrTimedOut = true; reject(new Error('timeout')); }, 60000)
+      );
+      const ocrPromise = worker.recognize(processed).then(({ data }) => {
+        worker.terminate();
+        return data.text.trim();
+      }).catch(() => {
+        worker.terminate();
+        return '';
+      });
+      const textResult = await Promise.race([ocrPromise, timeoutPromise]).catch(() => '');
+      setRawText(textResult);
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error('Error de IA: ' + (response.status + ' ' + errText.slice(0, 100)));
-      }
-
-      const data = await response.json();
-      const text = data.content.find(b => b.type === 'text')?.text || '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-
-      setRawText(text);
-
-      let items = (parsed.productos || []).map(p => ({
-        name: p.nombre || '',
-        quantity: String(p.cantidad || '1'),
-        unit: p.unidad || 'unidad',
-        category: 'otro',
-        price: p.precio
-      })).filter(i => i.name && i.name.length >= 2);
-
-      if (items.length === 0) {
-        setError('No se detectaron productos. Intenta con una foto más clara del ticket.');
+      if (!textResult || textResult.length < 5) {
+        setError('No se pudo leer el ticket. Asegúrate de que esté bien iluminado y enfocado.');
         setStep('initial');
         setProcessing(false);
         return;
       }
 
-      items = items.map(i => ({
-        ...i,
-        category: categoryOptions.includes(i.category) ? i.category : 'otro'
-      }));
+      let items = parseTicketText(textResult);
+
+      if (items.length === 0) {
+        const lines = textResult.split('\n').map(l => l.trim()).filter(Boolean);
+        const filtered = lines.filter(l => {
+          const clean = l.replace(/[^a-záéíóúA-ZÁÉÍÓÚ]/g, '').trim().toLowerCase();
+          return clean.length >= 3 && isLikelyFood(clean);
+        });
+        items = filtered.map(l => ({ name: l.trim(), quantity: '1', unit: 'unidad', category: 'otro' })).slice(0, 50);
+      }
+
+      items = items.filter(i => i.name && isLikelyFood(i.name));
+      items = items.map(i => ({ ...i, category: categoryOptions.includes(i.category) ? i.category : 'otro' }));
+
+      if (items.length === 0) {
+        setError('No se detectaron productos de alimentación. Intenta con una foto más clara del ticket.');
+        setStep('initial');
+        setProcessing(false);
+        return;
+      }
 
       setParsedItems(items);
       setStep('review');
