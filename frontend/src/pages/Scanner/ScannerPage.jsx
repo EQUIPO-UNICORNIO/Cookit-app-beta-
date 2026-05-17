@@ -381,9 +381,9 @@ export default function ScannerPage() {
           ) : (
             <div className="relative -mx-4 rounded-none overflow-hidden border-0 bg-black mb-4" style={{ height: 'calc(100vh - 140px)' }}>
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-              <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-6">
-                <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                  <div className="w-12 h-12 rounded-full bg-white" />
+              <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center">
+                <button onClick={capturePhoto} className="w-20 h-20 rounded-full border-[5px] border-white bg-white/20 flex items-center justify-center hover:bg-white/30 active:scale-90 transition-all">
+                  <div className="w-14 h-14 rounded-full bg-white shadow-md" />
                 </button>
               </div>
               <button onClick={toggleFlash} className={`absolute top-4 right-4 p-2.5 rounded-full transition-colors ${flashOn ? 'bg-yellow-400 text-yellow-900' : 'bg-black/40 text-white hover:bg-black/60'}`}>
