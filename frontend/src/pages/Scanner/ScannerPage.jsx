@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { createWorker } from 'tesseract.js';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 const categoryOptions = ['proteina', 'carbohidrato', 'verdura', 'fruta', 'lacteo', 'grasa', 'otro'];
@@ -16,6 +17,27 @@ const SUGGESTED_MEALS = [
   { name: 'Hamburguesa casera', recipe: 'Hamburguesa', ingredients: ['Carne molida', 'Pan de hamburguesa', 'Lechuga', 'Tomate', 'Queso'], instructions: '1. Forma las hamburguesas con la carne.\n2. Cocina a la plancha 4 min por lado.\n3. Tuesta el pan.\n4. Monta con lechuga, tomate y queso.' },
   { name: 'Ensalada de frutas', recipe: 'Ensalada de frutas', ingredients: ['Manzana', 'Plátano', 'Naranja', 'Fresa', 'Uva'], instructions: '1. Lava todas las frutas.\n2. Corta en trozos pequeños.\n3. Mezcla en un bol.\n4. Sirve frío.' },
   { name: 'Sopa de verduras', recipe: 'Sopa de verduras', ingredients: ['Zanahoria', 'Apio', 'Cebolla', 'Papa', 'Caldo de verduras'], instructions: '1. Corta todas las verduras en cubos.\n2. Sofríe la cebolla.\n3. Agrega el resto de verduras y caldo.\n4. Cocina 30 min y sirve caliente.' },
+];
+
+const FOOD_DICT = [
+  'agua', 'aceite', 'arroz', 'azucar', 'ajo', 'avena', 'atun', 'aceituna', 'almendra',
+  'brocoli', 'berenjena', 'boniato', 'batata',
+  'cerveza', 'cafe', 'cacao', 'canela', 'cebolla', 'calabacin', 'calabaza',
+  'chocolate', 'chorizo', 'carne', 'cordero', 'conejo', 'cereal',
+  'espinaca', 'esparrago', 'ensalada', 'embutido',
+  'fresa', 'frijol', 'fruta', 'fideo', 'flan',
+  'garbanzo', 'galleta', 'gaseosa', 'guisante', 'gelatina', 'granola',
+  'huevo', 'harina', 'helado',
+  'jamon', 'judia',
+  'leche', 'lenteja', 'limon', 'lechuga', 'langostino', 'lomo',
+  'manzana', 'mango', 'mandarina', 'mantequilla', 'maiz', 'merluza', 'miel',
+  'naranja', 'nuez',
+  'pan', 'papa', 'patata', 'pasta', 'pera', 'pescado', 'pimiento', 'pollo', 'platano',
+  'puerro', 'pavo', 'pepino', 'pina', 'pizza', 'palomita',
+  'queso', 'quinua',
+  'salmon', 'sal', 'salsa', 'sandia', 'soja', 'sopa', 'sardina',
+  'tomate', 'tortilla', 'taco',
+  'uva', 'yogur', 'yuca', 'zanahoria', 'zumo'
 ];
 
 const matchIngredients = (itemNames, mealIngredients) => {
@@ -40,75 +62,72 @@ export default function ScannerPage() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const fileInputRef = useRef(null);
 
+  const preprocessForOcr = (canvas) => {
+    const w = canvas.width, h = canvas.height;
+    const src = canvas.getContext('2d').getImageData(0, 0, w, h);
+    const data = src.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const gray = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+      const inv = 255 - gray;
+      const stretch = ((inv - 128) * 1.8) + 128;
+      data[i] = data[i + 1] = data[i + 2] = Math.max(0, Math.min(255, stretch));
+    }
+    return canvas;
+  };
+
   const processImage = async (canvas) => {
     setProcessing(true);
-    setOcrProgress('Analizando ticket con IA...');
+    setOcrProgress('');
     setError('');
     try {
-      const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'CLAVE_API_AQUI',
+      const processed = preprocessForOcr(canvas);
+      const worker = await createWorker('spa+eng', 1, {
+        logger: m => {
+          if (m.status) setOcrProgress(m.status + (m.progress ? ` ${Math.round(m.progress * 100)}%` : ''));
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: 'image/jpeg', data: base64 }
-              },
-              {
-                type: 'text',
-                text: `Analiza este ticket de supermercado español. Devuelve ÚNICAMENTE un JSON válido, sin texto extra, sin markdown, sin backticks:
-{
-  "productos": [
-    { "nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad", "precio": 1.99 }
-  ]
-}
-Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, dirección o datos del supermercado. Solo productos alimentarios.`
-              }
-            ]
-          }]
-        })
       });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error('Error de IA: ' + (response.status + ' ' + errText.slice(0, 100)));
-      }
-
-      const data = await response.json();
-      const text = data.content.find(b => b.type === 'text')?.text || '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6',
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzáéíóúñüÁÉÍÓÚÑÜ0123456789.,/€-% ',
+      });
+      const { data } = await worker.recognize(processed);
+      const text = data.text.trim();
+      worker.terminate();
       setRawText(text);
 
-      let items = (parsed.productos || []).map(p => ({
-        name: p.nombre || '',
-        quantity: String(p.cantidad || '1'),
-        unit: p.unidad || 'unidad',
-        category: 'otro',
-        price: p.precio
-      })).filter(i => i.name && i.name.length >= 2);
-
-      if (items.length === 0) {
-        setError('No se detectaron productos. Intenta con una foto más clara del ticket.');
+      if (!text || text.length < 10) {
+        setError('No se pudo leer el ticket. Asegurate de que este bien iluminado y enfocado.');
         setStep('initial');
         setProcessing(false);
         return;
       }
 
-      items = items.map(i => ({
-        ...i,
-        category: categoryOptions.includes(i.category) ? i.category : 'otro'
-      }));
+      const lines = text.split('\n').map(l => {
+        const clean = l.replace(/[^a-zA-Z0-9\s.,]/g, '').trim();
+        return clean;
+      }).filter(Boolean);
+      const items = lines.filter(l => {
+        const lower = l.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (lower.length < 3) return false;
+        if (/^(total|subtotal|iva|efectivo|tarjeta|cambio|gracias|ticket|factura|nif|cif|cliente|importe|descuento|redondo|€|\d+)/.test(lower)) return false;
+        if (/^\d+$/.test(lower.replace(/[\s.,]/g, ''))) return false;
+        const words = lower.split(/\s+/);
+        const foodWords = words.filter(w => FOOD_DICT.some(f => f === w || f.includes(w) || w.includes(f)));
+        return foodWords.length > 0 || (words.some(w => /[aeiouáéíóú]/i.test(w) && w.length >= 4 && !/^\d/.test(w)));
+      }).slice(0, 50).map(l => ({
+        name: l.replace(/^[\d\s.,]+/, '').trim(),
+        quantity: '1',
+        unit: 'unidad',
+        category: 'otro'
+      })).filter(i => i.name.length >= 2);
+
+      if (items.length === 0) {
+        setError('No se detectaron productos de alimentacion. Intenta con una foto mas clara del ticket.');
+        setStep('initial');
+        setProcessing(false);
+        return;
+      }
 
       setParsedItems(items);
       setStep('review');
@@ -128,7 +147,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
     img.src = URL.createObjectURL(file);
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const maxDim = 2000;
+      const maxDim = 2500;
       let w = img.width, h = img.height;
       if (w > maxDim || h > maxDim) {
         if (w > h) { h = h * maxDim / w; w = maxDim; }
@@ -209,7 +228,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Escaner de Tickets</h1>
-          <p className="text-sm text-gray-500 font-medium">Sube o captura tu ticket de compra</p>
+          <p className="text-sm text-gray-500 font-medium">Sube tu ticket de compra</p>
         </div>
       </div>
 
@@ -228,7 +247,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
             <span className="material-symbols-outlined text-5xl text-gray-300">receipt_long</span>
           </div>
           <p className="text-gray-500 font-medium mb-6">
-            Sube una foto de tu ticket de compra y los productos se guardarán automáticamente en tu despensa.
+            Sube una foto de tu ticket de compra y los productos se guardaran automaticamente en tu despensa.
           </p>
 
           <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
@@ -238,7 +257,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
           </button>
 
           <p className="text-xs text-gray-400">
-            La imagen se procesa localmente. No se envía a ningún servidor externo.
+            La imagen se procesa localmente. No se envia a ningun servidor externo.
           </p>
         </div>
       )}
@@ -262,7 +281,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
                 <p className="text-xs text-gray-500">{parsedItems.length} producto(s) — Revisa y edita antes de guardar</p>
               </div>
               <button onClick={addItem} className="neo-btn-primary !py-1.5 !px-3 !text-xs">
-                <span className="material-symbols-outlined text-sm align-text-bottom">add</span> Añadir
+                <span className="material-symbols-outlined text-sm align-text-bottom">add</span> Anadir
               </button>
             </div>
 
@@ -335,7 +354,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
                         const isMatch = meal.matched.includes(ing);
                         return (
                           <span key={j} className={`text-xs px-2 py-0.5 rounded-full border ${isMatch ? 'bg-green-100 border-green-300 text-green-700' : 'bg-gray-100 dark:bg-gray-600 border-gray-200 dark:border-gray-500 text-gray-400'}`}>
-                            {isMatch ? '✓ ' : ''}{ing}
+                            {isMatch ? '? ' : ''}{ing}
                           </span>
                         );
                       })}
@@ -382,7 +401,7 @@ Extrae todos los productos visibles. Ignora líneas de total, IVA, fecha, direcc
           <div className="w-20 h-20 mx-auto rounded-3xl bg-primary-100 border-2 border-primary-500 flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-4xl text-primary-600">check</span>
           </div>
-          <h2 className="text-xl font-extrabold dark:text-white">¡Ticket escaneado!</h2>
+          <h2 className="text-xl font-extrabold dark:text-white">?Ticket escaneado!</h2>
           <p className="text-gray-500 dark:text-gray-300 mt-1">{successCount} producto(s) guardado(s) en tu despensa</p>
           <div className="flex flex-col gap-2 mt-6">
             <button onClick={resetAll} className="neo-btn-primary">
