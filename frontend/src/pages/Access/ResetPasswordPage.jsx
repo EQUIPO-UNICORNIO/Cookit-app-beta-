@@ -40,6 +40,15 @@ export default function ResetPasswordPage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const res = await fetch('/api/auth/sync-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) console.error('Sync password failed:', await res.text());
+      }
       setDone(true);
     } catch (err) {
       setError(err.message);

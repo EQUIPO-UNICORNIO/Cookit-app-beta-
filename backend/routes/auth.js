@@ -69,4 +69,21 @@ router.put('/avatar', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/sync-password', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Token requerido' });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
+    if (error || !authUser) return res.status(401).json({ error: 'Token inválido' });
+    const { password } = req.body;
+    if (!password || password.length < 6) return res.status(400).json({ error: 'Contraseña inválida' });
+    const hashed = await bcrypt.hash(password, 10);
+    await supabase.from('users').update({ password: hashed }).eq('email', authUser.email);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
