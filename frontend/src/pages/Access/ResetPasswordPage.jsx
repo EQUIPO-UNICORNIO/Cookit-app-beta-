@@ -8,15 +8,18 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [ready, setReady] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        setReady(true);
       }
     });
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== 'PASSWORD_RECOVERY' && event !== 'USER_UPDATED') {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true);
       }
     });
     return () => listener?.subscription?.unsubscribe();
@@ -105,9 +108,12 @@ export default function ResetPasswordPage() {
               <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
             </div>
           )}
+          {!ready && (
+            <p className="text-xs text-gray-400 text-center">Verificando enlace de recuperación...</p>
+          )}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !ready}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl py-3 text-base transition-all shadow-lg shadow-primary-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (

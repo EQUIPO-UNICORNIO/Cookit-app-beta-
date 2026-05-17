@@ -23,7 +23,7 @@ export default function ForgotPasswordModal({ onClose }) {
     setLoading(true);
     try {
       const { error: supaError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
+        redirectTo: 'https://cookit-delta.vercel.app/reset-password',
       });
       if (supaError) throw supaError;
       setSent(true);
