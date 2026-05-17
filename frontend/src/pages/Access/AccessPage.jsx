@@ -191,7 +191,7 @@ export default function AccessPage() {
             onClick={() => { setEmail('aronets2004@gmail.com'); setPassword('Cookit2026'); setIsLogin(true); }}
             className="text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors"
           >
-            Acceso Desarrollador (aronets2004@gmail.com)
+            Acceso Desarrollador
           </button>
         </div>
 
