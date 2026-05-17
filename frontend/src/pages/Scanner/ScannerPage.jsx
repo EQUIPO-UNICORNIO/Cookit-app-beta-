@@ -125,7 +125,8 @@ export default function ScannerPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
-  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const cameraStreamRef = useRef(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -244,7 +245,8 @@ export default function ScannerPage() {
   };
 
   const resetAll = () => {
-    stopCamera();
+    if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null; }
+    setCameraActive(false);
     setStep('initial');
     setParsedItems([]);
     setRawText('');
@@ -266,12 +268,12 @@ export default function ScannerPage() {
     setParsedItems(prev => [...prev, { name: '', quantity: '1', unit: 'unidad', category: 'otro' }]);
   };
 
-  useEffect(() => () => stopCamera(), []);
-  useEffect(() => { if (step !== 'initial') stopCamera(); }, [step]);
+  useEffect(() => () => { cameraStreamRef.current?.getTracks().forEach(t => t.stop()); }, []);
+  useEffect(() => { if (step !== 'initial') { cameraStreamRef.current?.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null; setCameraActive(false); } }, [step]);
 
   const startCamera = async () => {
+    setCameraActive(true);
     try {
-      if (cameraStream) stopCamera();
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -280,29 +282,32 @@ export default function ScannerPage() {
       } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
+      cameraStreamRef.current = stream;
       const video = videoRef.current;
-      if (!video) { stream.getTracks().forEach(t => t.stop()); return; }
-      video.srcObject = stream;
-      await new Promise((resolve, reject) => {
-        video.onloadedmetadata = () => { video.play().then(resolve).catch(reject); };
-        video.onerror = reject;
-      });
-      setCameraStream(stream);
+      if (video) {
+        video.srcObject = stream;
+        await new Promise((resolve, reject) => {
+          video.onloadedmetadata = () => { video.play().then(resolve).catch(reject); };
+          video.onerror = reject;
+        });
+      }
     } catch {
+      setCameraActive(false);
       setError('No se pudo abrir la camara. Usa la opcion de subir foto.');
     }
   };
 
   const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-      setCameraStream(null);
+    setCameraActive(false);
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
     }
   };
 
   const toggleFlash = async () => {
-    if (!cameraStream) return;
-    const track = cameraStream.getVideoTracks()[0];
+    if (!cameraStreamRef.current) return;
+    const track = cameraStreamRef.current.getVideoTracks()[0];
     if (!track || !track.getCapabilities().torch) {
       setError('Flash no disponible en este dispositivo');
       return;
@@ -322,7 +327,9 @@ export default function ScannerPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    stopCamera();
+    cameraStreamRef.current?.getTracks().forEach(t => t.stop());
+    cameraStreamRef.current = null;
+    setCameraActive(false);
     setFlashOn(false);
     processImage(canvas);
   };
@@ -350,7 +357,7 @@ export default function ScannerPage() {
         <div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
 
-          {!cameraStream ? (
+          {!cameraActive ? (
             <div className="text-center pt-4">
               <div className="w-36 h-36 mx-auto rounded-3xl border-4 border-dashed border-gray-300 flex items-center justify-center mb-5">
                 <span className="material-symbols-outlined text-5xl text-gray-300">receipt_long</span>
