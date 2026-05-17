@@ -1,5 +1,5 @@
 const express = require('express');
-const { queryAll, execute, getLastId, saveDb } = require('../config/database');
+const { getAll, create, deleteById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,7 +7,7 @@ router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   try {
-    const subs = await queryAll('SELECT id, ingredient, substitute, reason FROM ingredient_substitutions WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const subs = await getAll('ingredient_substitutions', { user_id: req.userId }, { orderBy: 'created_at' });
     res.json(subs);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -16,17 +16,16 @@ router.post('/', async (req, res) => {
   try {
     const { ingredient, substitute, reason } = req.body;
     if (!ingredient || !substitute) return res.status(400).json({ error: 'Ingrediente y sustituto requeridos' });
-    await execute('INSERT INTO ingredient_substitutions (user_id, ingredient, substitute, reason) VALUES (?, ?, ?, ?)',
-      [req.userId, ingredient, substitute, reason || '']);
-    saveDb();
-    res.status(201).json({ id: getLastId(), ingredient, substitute, reason: reason || '' });
+    const sub = await create('ingredient_substitutions', {
+      user_id: req.userId, ingredient, substitute, reason: reason || ''
+    });
+    res.status(201).json(sub);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
-    await execute('DELETE FROM ingredient_substitutions WHERE id=? AND user_id=?', [req.params.id, req.userId]);
-    saveDb();
+    await deleteById('ingredient_substitutions', req.params.id, req.userId);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

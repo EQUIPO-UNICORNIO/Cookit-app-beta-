@@ -1,5 +1,6 @@
 const express = require('express');
-const { queryAll, execute, saveDb } = require('../config/database');
+const supabase = require('../lib/supabase');
+const { create, updateById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -54,7 +55,10 @@ router.post('/save-merged', async (req, res) => {
     const { items } = req.body;
     if (!Array.isArray(items)) return res.status(400).json({ error: 'Items requeridos' });
 
-    const existing = await queryAll('SELECT id, name, quantity, unit, category FROM pantry_items WHERE user_id = ?', [req.userId]);
+    const { data: existing } = await supabase
+      .from('pantry_items')
+      .select('id, name, quantity, unit, category')
+      .eq('user_id', req.userId);
 
     let count = 0;
     for (const item of items) {
@@ -64,18 +68,19 @@ router.post('/save-merged', async (req, res) => {
       const unit = item.unit || 'unidad';
       const category = item.category || 'otro';
 
-      const match = existing.find(e => e.name.toLowerCase() === name.toLowerCase());
+      const match = (existing || []).find(e => e.name.toLowerCase() === name.toLowerCase());
       if (match) {
         const newQty = (parseFloat(match.quantity) || 0) + qty;
-        await execute('UPDATE pantry_items SET quantity=?, unit=?, category=? WHERE id=? AND user_id=?',
-          [String(newQty), unit, category, match.id, req.userId]);
+        await updateById('pantry_items', match.id, {
+          quantity: String(newQty), unit, category
+        }, req.userId);
       } else {
-        await execute('INSERT INTO pantry_items (user_id, name, category, quantity, unit) VALUES (?, ?, ?, ?, ?)',
-          [req.userId, name, category, String(qty), unit]);
+        await create('pantry_items', {
+          user_id: req.userId, name, category, quantity: String(qty), unit
+        });
       }
       count++;
     }
-    saveDb();
     res.json({ success: true, count });
   } catch (e) {
     res.status(500).json({ error: e.message });

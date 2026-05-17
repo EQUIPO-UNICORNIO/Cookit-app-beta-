@@ -1,10 +1,10 @@
 {
   "name": "cookit-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "install:all": "npm --prefix frontend install && npm --prefix backend install",
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install",
-    "start": "node backend/server.js"
+    "build": "cd frontend && npm install && node node_modules/vite/bin/vite.js build",
+    "start": "node backend/server.js",
+    "migrate": "node scripts/migrate-to-supabase.js"
   }
 }

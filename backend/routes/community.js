@@ -1,5 +1,6 @@
 const express = require('express');
-const { queryAll, queryOne, execute, getLastId, saveDb } = require('../config/database');
+const supabase = require('../lib/supabase');
+const { create, deleteById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,19 +8,37 @@ router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   try {
-    const posts = await queryAll(
-      `SELECT p.id, p.content, p.likes, p.meal_id, p.meal_name, p.photo, p.ingredients, p.instructions, p.created_at, u.name as user_name, u.avatar as user_avatar
-       FROM community_posts p JOIN users u ON p.user_id = u.id
-       ORDER BY p.created_at DESC`
-    );
-    const enriched = await Promise.all(posts.map(async (post) => {
-      const liked = await queryOne('SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?', [post.id, req.userId]);
-      const comments = await queryAll(
-        `SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar as user_avatar
-         FROM post_comments c JOIN users u ON c.user_id = u.id
-         WHERE c.post_id = ? ORDER BY c.created_at ASC`, [post.id]
-      );
-      return { ...post, liked: !!liked, comments, ingredients: JSON.parse(post.ingredients || '[]') };
+    const { data: posts, error } = await supabase
+      .from('community_posts')
+      .select('id, content, likes, meal_id, meal_name, photo, ingredients, instructions, created_at, user_id, users!inner(name, avatar)')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const enriched = await Promise.all((posts || []).map(async (post) => {
+      const { data: liked } = await supabase
+        .from('post_likes')
+        .select('id')
+        .eq('post_id', post.id)
+        .eq('user_id', req.userId)
+        .maybeSingle();
+
+      const { data: comments } = await supabase
+        .from('post_comments')
+        .select('id, content, created_at, user_id, users!inner(name, avatar)')
+        .eq('post_id', post.id)
+        .order('created_at', { ascending: true });
+
+      return {
+        id: post.id, content: post.content, likes: post.likes,
+        meal_id: post.meal_id, meal_name: post.meal_name, photo: post.photo,
+        ingredients: JSON.parse(post.ingredients || '[]'),
+        instructions: post.instructions, created_at: post.created_at,
+        user_name: post.users?.name || '', user_avatar: post.users?.avatar || '',
+        liked: !!liked, comments: (comments || []).map(c => ({
+          id: c.id, content: c.content, created_at: c.created_at,
+          user_name: c.users?.name || '', user_avatar: c.users?.avatar || ''
+        }))
+      };
     }));
     res.json(enriched);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -29,24 +48,30 @@ router.post('/', async (req, res) => {
   try {
     const { content, photo, ingredients, instructions } = req.body;
     if (!content) return res.status(400).json({ error: 'Contenido requerido' });
-    await execute('INSERT INTO community_posts (user_id, content, photo, ingredients, instructions) VALUES (?, ?, ?, ?, ?)',
-      [req.userId, content, photo || '', JSON.stringify(ingredients || []), instructions || '']);
-    saveDb();
-    res.status(201).json({ id: getLastId(), content, likes: 0, photo: photo || '', ingredients: ingredients || [], instructions: instructions || '' });
+    const post = await create('community_posts', {
+      user_id: req.userId, content, photo: photo || '',
+      ingredients: JSON.stringify(ingredients || []), instructions: instructions || ''
+    });
+    res.status(201).json({ ...post, ingredients: ingredients || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/like', async (req, res) => {
   try {
-    const existing = await queryOne('SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?', [req.params.id, req.userId]);
+    const { data: existing } = await supabase
+      .from('post_likes')
+      .select('id')
+      .eq('post_id', req.params.id)
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
     if (existing) {
-      await execute('DELETE FROM post_likes WHERE id = ?', [existing.id]);
-      await execute('UPDATE community_posts SET likes = MAX(0, likes - 1) WHERE id = ?', [req.params.id]);
+      await supabase.from('post_likes').delete().eq('id', existing.id);
+      await supabase.rpc('decrement_likes', { post_id: req.params.id });
     } else {
-      await execute('INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)', [req.params.id, req.userId]);
-      await execute('UPDATE community_posts SET likes = likes + 1 WHERE id = ?', [req.params.id]);
+      await supabase.from('post_likes').insert({ post_id: parseInt(req.params.id), user_id: req.userId });
+      await supabase.rpc('increment_likes', { post_id: req.params.id });
     }
-    saveDb();
     res.json({ success: true, liked: !existing });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -55,34 +80,40 @@ router.post('/:id/comments', async (req, res) => {
   try {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Contenido requerido' });
-    const post = await queryOne('SELECT id FROM community_posts WHERE id = ?', [req.params.id]);
+    const { data: post } = await supabase.from('community_posts').select('id').eq('id', req.params.id).maybeSingle();
     if (!post) return res.status(404).json({ error: 'Post no encontrado' });
-    await execute('INSERT INTO post_comments (post_id, user_id, content) VALUES (?, ?, ?)', [req.params.id, req.userId, content]);
-    saveDb();
-    res.status(201).json({ id: getLastId(), content });
+    const comment = await create('post_comments', {
+      post_id: parseInt(req.params.id), user_id: req.userId, content
+    });
+    res.status(201).json(comment);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/save', async (req, res) => {
   try {
-    const post = await queryOne('SELECT id, user_id, content, photo, ingredients, instructions FROM community_posts WHERE id = ?', [req.params.id]);
+    const { data: post } = await supabase
+      .from('community_posts')
+      .select('id, content, photo, ingredients, instructions')
+      .eq('id', req.params.id)
+      .maybeSingle();
     if (!post) return res.status(404).json({ error: 'Post no encontrado' });
     const ingredients = JSON.parse(post.ingredients || '[]');
     const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const today = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
-    await execute('INSERT INTO meal_plans (user_id, name, day, meal_type, recipe, ingredients, instructions, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [req.userId, post.content, today, 'comida', post.content, JSON.stringify(ingredients), post.instructions || '', post.photo || '']);
-    saveDb();
+    await create('meal_plans', {
+      user_id: req.userId, name: post.content, day: today, meal_type: 'comida',
+      recipe: post.content, ingredients: JSON.stringify(ingredients),
+      instructions: post.instructions || '', photo: post.photo || ''
+    });
     res.json({ success: true, message: 'Receta guardada en tus menús' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
-    await execute('DELETE FROM community_posts WHERE id=? AND user_id=?', [req.params.id, req.userId]);
-    await execute('DELETE FROM post_likes WHERE post_id=?', [req.params.id]);
-    await execute('DELETE FROM post_comments WHERE post_id=?', [req.params.id]);
-    saveDb();
+    await supabase.from('post_likes').delete().eq('post_id', req.params.id);
+    await supabase.from('post_comments').delete().eq('post_id', req.params.id);
+    await deleteById('community_posts', req.params.id, req.userId);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

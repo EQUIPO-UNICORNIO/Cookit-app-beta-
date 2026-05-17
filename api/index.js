@@ -1,6 +1,6 @@
 const express = require('express');
-const app = require('./app');
 const path = require('path');
+const app = require('../backend/app');
 
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.get('*', (req, res) => {
@@ -11,7 +11,4 @@ app.get('*', (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`CookIt API corriendo en puerto ${PORT}`);
-});
+module.exports = app;
