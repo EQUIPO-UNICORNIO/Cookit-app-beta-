@@ -49,7 +49,8 @@ export default function CommunityPage() {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
-  const [newIngredients, setNewIngredients] = useState('');
+  const [newIngredients, setNewIngredients] = useState([]);
+  const [ingredientInput, setIngredientInput] = useState('');
   const [newInstructions, setNewInstructions] = useState('');
   const [commentText, setCommentText] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
@@ -89,11 +90,12 @@ export default function CommunityPage() {
     e.preventDefault();
     if (!newPost.trim()) return;
     try {
-      const data = { content: newPost, photo: newPhoto, ingredients: newIngredients.split(',').map(i => i.trim()).filter(Boolean), instructions: newInstructions };
+      const data = { content: newPost, photo: newPhoto, ingredients: newIngredients, instructions: newInstructions };
       await api.createPost(data);
       setNewPost('');
       setNewPhoto('');
-      setNewIngredients('');
+      setNewIngredients([]);
+      setIngredientInput('');
       setNewInstructions('');
       loadPosts();
     } catch (e) { showToast('Error al publicar'); }
@@ -146,7 +148,40 @@ export default function CommunityPage() {
           className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm font-medium resize-none min-h-[80px] focus:outline-none focus:border-primary-500"
         />
         <div className="flex gap-2 mt-2">
-          <input className="neo-input flex-1 text-xs" placeholder="Ingredientes (separados por coma)" value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
+          <div className="flex-1 flex flex-wrap gap-1 items-center border-2 border-gray-200 rounded-xl px-2 py-1.5 min-h-[36px] focus-within:border-primary-500 transition-colors">
+            {newIngredients.map((ing, i) => (
+              <span key={i} className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 border border-primary-200 rounded-lg px-2 py-0.5 font-medium">
+                {ing}
+                <button type="button" onClick={() => setNewIngredients(prev => prev.filter((_, j) => j !== i))} className="text-primary-400 hover:text-primary-700 leading-none">&times;</button>
+              </span>
+            ))}
+            <input
+              className="flex-1 text-xs bg-transparent border-none outline-none min-w-[80px] p-0.5"
+              placeholder={newIngredients.length === 0 ? 'Ingredientes' : 'Añadir más...'}
+              value={ingredientInput}
+              onChange={e => {
+                const val = e.target.value;
+                if (val.endsWith(',') || val.endsWith(';')) {
+                  const item = val.slice(0, -1).trim();
+                  if (item) setNewIngredients(prev => [...prev, item]);
+                  setIngredientInput('');
+                } else {
+                  setIngredientInput(val);
+                }
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  const item = ingredientInput.trim();
+                  if (item) setNewIngredients(prev => [...prev, item]);
+                  setIngredientInput('');
+                }
+                if (e.key === 'Backspace' && !ingredientInput && newIngredients.length > 0) {
+                  setNewIngredients(prev => prev.slice(0, -1));
+                }
+              }}
+            />
+          </div>
           <button type="button" onClick={() => fileInputRef.current?.click()} className="neo-btn !py-1.5 !px-3 !text-xs !border-secondary-300 text-secondary-600">
             <span className="material-symbols-outlined text-sm align-text-bottom">photo_camera</span>
           </button>
