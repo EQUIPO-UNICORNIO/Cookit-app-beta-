@@ -1,33 +1,27 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 
-const categories = ['Verduras', 'Frutas', 'Carnes', 'Lácteos', 'Pan', 'Conservas', 'Congelados', 'Bebidas', 'Especias', 'Otros'];
+const categories = ['Proteínas', 'Frutas y Verduras', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Otros'];
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 
 const categoryIcons = {
-  'Verduras': 'eco',
-  'Frutas': 'nutrition',
-  'Carnes': 'lunch_dining',
+  'Proteínas': 'lunch_dining',
+  'Frutas y Verduras': 'eco',
   'Lácteos': 'water_drop',
-  'Pan': 'bakery_dining',
+  'Hidratos': 'bakery_dining',
   'Conservas': 'inventory_2',
-  'Congelados': 'ac_unit',
-  'Bebidas': 'coffee',
-  'Especias': 'spa',
+  'Condimentos': 'spa',
   'Otros': 'inventory_2',
 };
 
 const autoCategorize = (name) => {
   const n = name.toLowerCase().trim();
-  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo/i.test(n)) return 'Carnes';
-  if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre/i.test(n)) return 'Verduras';
-  if (/manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya/i.test(n)) return 'Frutas';
-  if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano/i.test(n)) return 'Lácteos';
-  if (/pan|bollo|barra|baguette|molde|integral|tostada|pancake|crepe|chapata|centeno/i.test(n)) return 'Pan';
-  if (/lata|conserva|aceituna|encurtido|atún|sardina|mejillón|berberecho|anchoa/i.test(n)) return 'Conservas';
-  if (/congelado|helado|pizza|verduras congeladas|patatas congeladas|pescado congelado/i.test(n)) return 'Congelados';
-  if (/agua|zumo|refresco|cola|cerveza|vino|bebida|infusión|café|té|gaseosa|sidra/i.test(n)) return 'Bebidas';
-  if (/sal|pimienta|orégano|canela|especia|laurel|tomillo|romero|curry|pimentón|comino|nuez|clavo|jengibre/i.test(n)) return 'Especias';
+  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón/i.test(n)) return 'Proteínas';
+  if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre|manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya|granada|mandarina|frambuesa|mor/i.test(n)) return 'Frutas y Verduras';
+  if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano|kefir|ricotta/i.test(n)) return 'Lácteos';
+  if (/arroz|pasta|macarrón|espagueti|pan|bollo|barra|baguette|molde|integral|tostada|pancake|crepe|chapata|centeno|harina|avena|legumbre|lenteja|garbanzo|alubia|judía|garrofón|quinoa|cuscús|trigo|maíz|tortilla|taco|galleta|bizcocho|magdalena|cereal/i.test(n)) return 'Hidratos';
+  if (/lata|conserva|aceituna|encurtido|maíz dulce|tomate frito|tomate triturado|pimiento asado|alcachofa en conserva|berberecho|mejillón en conserva|caldo|sopa/i.test(n)) return 'Conservas';
+  if (/aceite|sal|pimienta|orégano|canela|especia|laurel|tomillo|romero|curry|pimentón|comino|nuez moscada|clavo|vinagre|mostaza|azafrán|albahaca|cilantro|perejil|eneldo|condimento/i.test(n)) return 'Condimentos';
   return 'Otros';
 };
 
