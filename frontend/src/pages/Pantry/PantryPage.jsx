@@ -3,7 +3,6 @@ import { api } from '../../api/client';
 
 const categories = ['Proteínas', 'Frutas y Verduras', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Otros'];
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
-const quickItems = ['Huevos', 'Pasta', 'Arroz', 'Atún', 'Leche'];
 
 const categoryIcons = {
   'Proteínas': 'lunch_dining',
@@ -82,25 +81,6 @@ export default function PantryPage() {
       localIdCounter = Math.max(...local.map(m => parseInt(m.id.replace('local_', '')) || 0), 0) + 1;
     }
     setItems([...local, ...apiItems]);
-  };
-
-  const quickAdd = (name) => {
-    const id = 'local_' + (++localIdCounter);
-    const item = {
-      id,
-      name,
-      category: autoCategorize(name),
-      quantity: '1',
-      unit: 'unidad',
-      expiry_date: '',
-      notes: '',
-      created_at: new Date().toISOString(),
-    };
-    const local = getLocalPantry();
-    local.push(item);
-    saveLocalPantry(local);
-    setItems(prev => [...prev, item]);
-    showToast(`${name} añadido a la despensa`);
   };
 
   const handleSubmit = async (e) => {
@@ -259,21 +239,7 @@ export default function PantryPage() {
         </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-3">
-        {quickItems.map(name => {
-          const cat = autoCategorize(name);
-          const icon = categoryIcons[cat] || 'inventory_2';
-          return (
-            <button
-              key={name}
-              onClick={() => quickAdd(name)}
-              className="text-xs font-bold neo-btn !py-1.5 !px-3 !border-primary-300 text-primary-600 whitespace-nowrap flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-sm">{icon}</span> + {name} <span className="text-primary-400 font-normal">· {cat}</span>
-            </button>
-          );
-        })}
-      </div>
+
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onClick={() => setShowForm(false)}>
