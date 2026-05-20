@@ -212,6 +212,7 @@ export default function RecipesPage() {
         instructions: recipe.instructions,
       });
       showToast(`Receta añadida a ${today}`);
+      setSelectedRecipe(null);
     } catch (e) {
       showToast('Error al añadir: ' + e.message);
     }
