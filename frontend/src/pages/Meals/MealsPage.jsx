@@ -75,7 +75,10 @@ export default function MealsPage() {
   const loadMeals = async () => {
     let apiMeals = [];
     try { apiMeals = await api.getMeals(); } catch (e) { console.error(e); }
-    const local = getLocalMeals();
+    let local = getLocalMeals();
+    const before = local.length;
+    local = local.filter(m => m.day);
+    if (local.length !== before) saveLocalMeals(local);
     const merged = [...local, ...apiMeals];
     if (local.length > 0) {
       localIdCounter = Math.max(...local.map(m => parseInt(m.id.replace('local_', '')) || 0), 0) + 1;
