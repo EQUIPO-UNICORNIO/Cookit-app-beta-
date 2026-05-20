@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 
@@ -118,10 +118,12 @@ export default function RecipesPage() {
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [recipePhoto, setRecipePhoto] = useState('');
   const [filterCategory, setFilterCategory] = useState('Todas');
   const [filterDifficulty, setFilterDifficulty] = useState('Todas');
   const [showIngredientPicker, setShowIngredientPicker] = useState(false);
   const [toast, setToast] = useState(null);
+  const photoInputRef = useRef(null);
 
   useEffect(() => {
     loadPantry();
@@ -193,6 +195,27 @@ export default function RecipesPage() {
     setShowIngredientPicker(false);
   };
 
+  const handleRecipePhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 600;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+        else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        setRecipePhoto(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const clearAll = () => {
     setSelectedIngredients([]);
     setResults([]);
@@ -210,6 +233,7 @@ export default function RecipesPage() {
         recipe: recipe.name,
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
+        photo: recipePhoto,
       });
       showToast(`Receta añadida a ${today}`);
       setSelectedRecipe(null);
@@ -290,6 +314,18 @@ export default function RecipesPage() {
           </div>
         </div>
 
+        {recipePhoto && (
+          <img src={recipePhoto} alt="Foto" className="w-full h-40 object-cover rounded-xl border-2 border-black mb-3" />
+        )}
+        <div className="flex gap-2 mb-3">
+          <button onClick={() => photoInputRef.current?.click()} className="neo-btn flex-1 !text-xs">
+            <span className="material-symbols-outlined text-sm align-text-bottom">add_photo_alternate</span> {recipePhoto ? 'Cambiar foto' : 'Añadir foto'}
+          </button>
+          {recipePhoto && <button onClick={() => setRecipePhoto('')} className="neo-btn !border-red-300 text-red-500 flex-1 !text-xs">
+            <span className="material-symbols-outlined text-sm align-text-bottom">delete</span> Quitar foto
+          </button>}
+          <input ref={photoInputRef} type="file" accept="image/*" onChange={handleRecipePhoto} className="hidden" />
+        </div>
         <div className="flex gap-2">
           <button onClick={() => addToMealPlan(selectedRecipe)} className="neo-btn-primary flex-1">
             <span className="material-symbols-outlined text-sm align-text-bottom">playlist_add</span> Añadir a menús
