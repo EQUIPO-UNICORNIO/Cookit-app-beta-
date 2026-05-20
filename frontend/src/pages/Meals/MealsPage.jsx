@@ -52,6 +52,7 @@ export default function MealsPage() {
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [cookingStep, setCookingStep] = useState(0);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [fullPhoto, setFullPhoto] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => { loadMeals(); }, []);
@@ -178,7 +179,7 @@ export default function MealsPage() {
       canvas.getContext('2d').drawImage(img, 0, 0);
 
       const thumbCanvas = document.createElement('canvas');
-      const maxSize = 400;
+      const maxSize = 900;
       let tw = img.width, th = img.height;
       if (tw > th) { if (tw > maxSize) { th = th * maxSize / tw; tw = maxSize; } }
       else { if (th > maxSize) { tw = tw * maxSize / th; th = maxSize; } }
@@ -222,7 +223,7 @@ export default function MealsPage() {
             {selectedMeal.meal_type}
           </span>
           {selectedMeal.photo && (
-            <img src={selectedMeal.photo} alt={selectedMeal.name} className="w-full h-48 object-cover rounded-xl mt-3 border-2 border-black" />
+            <img src={selectedMeal.photo} alt={selectedMeal.name} className="w-full h-48 object-cover rounded-xl mt-3 border-2 border-black cursor-pointer" onClick={() => setFullPhoto(selectedMeal.photo)} />
           )}
           <h2 className="text-xl font-extrabold mt-2">{selectedMeal.name}</h2>
           <div className="flex items-center gap-3 mt-1">
@@ -395,6 +396,13 @@ export default function MealsPage() {
         </div>
       )}
 
+      {fullPhoto && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center" onClick={() => setFullPhoto(null)}>
+          <div className="absolute inset-0 bg-black/80" />
+          <img src={fullPhoto} alt="Foto completa" className="relative max-w-[95vw] max-h-[95vh] object-contain" onClick={e => e.stopPropagation()} />
+          <button onClick={() => setFullPhoto(null)} className="absolute top-4 right-4 text-white bg-black/40 rounded-full w-10 h-10 flex items-center justify-center text-2xl z-10">&times;</button>
+        </div>
+      )}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] pointer-events-none">
           <div className="bg-primary-600 text-white font-bold text-sm px-5 py-3 rounded-2xl border-2 border-primary-800 whitespace-nowrap">
