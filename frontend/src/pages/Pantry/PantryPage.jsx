@@ -110,13 +110,13 @@ export default function PantryPage() {
           await api.updatePantryItem(editing, form);
         }
       } else {
-        if (form.name) {
+        const saved = await api.addPantryItem(form).catch(() => null);
+        if (!saved && form.name) {
           const id = 'local_' + (++localIdCounter);
           const local = getLocalPantry();
           local.push({ id, ...form, created_at: new Date().toISOString() });
           saveLocalPantry(local);
         }
-        await api.addPantryItem(form).catch(() => {});
       }
       setShowForm(false);
       setEditing(null);
