@@ -273,6 +273,14 @@ export default function MealsPage() {
             <p className="text-gray-300 text-sm">Este plato no tiene pasos definidos</p>
           </div>
         )}
+
+        {fullPhoto && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center" onClick={() => setFullPhoto(null)}>
+            <div className="absolute inset-0 bg-black/80" />
+            <img src={fullPhoto} alt="Foto completa" className="relative max-w-[95vw] max-h-[95vh] object-contain" onClick={e => e.stopPropagation()} />
+            <button onClick={() => setFullPhoto(null)} className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/60 rounded-full w-10 h-10 flex items-center justify-center text-2xl z-10">&times;</button>
+          </div>
+        )}
       </div>
     );
   }
@@ -396,13 +404,6 @@ export default function MealsPage() {
         </div>
       )}
 
-      {fullPhoto && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center" onClick={() => setFullPhoto(null)}>
-          <div className="absolute inset-0 bg-black/80" />
-          <img src={fullPhoto} alt="Foto completa" className="relative max-w-[95vw] max-h-[95vh] object-contain" onClick={e => e.stopPropagation()} />
-          <button onClick={() => setFullPhoto(null)} className="absolute top-4 right-4 text-white bg-black/40 rounded-full w-10 h-10 flex items-center justify-center text-2xl z-10">&times;</button>
-        </div>
-      )}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] pointer-events-none">
           <div className="bg-primary-600 text-white font-bold text-sm px-5 py-3 rounded-2xl border-2 border-primary-800 whitespace-nowrap">
