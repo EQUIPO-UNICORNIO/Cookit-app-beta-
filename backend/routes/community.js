@@ -22,6 +22,11 @@ router.get('/', async (req, res) => {
         .eq('user_id', req.userId)
         .maybeSingle();
 
+      const { count } = await supabase
+        .from('post_likes')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', post.id);
+
       const { data: comments } = await supabase
         .from('post_comments')
         .select('id, content, created_at, user_id, users!inner(name, avatar)')
@@ -29,7 +34,7 @@ router.get('/', async (req, res) => {
         .order('created_at', { ascending: true });
 
       return {
-        id: post.id, content: post.content, likes: post.likes,
+        id: post.id, content: post.content, likes: count || 0,
         meal_id: post.meal_id, meal_name: post.meal_name, photo: post.photo,
         ingredients: JSON.parse(post.ingredients || '[]'),
         instructions: post.instructions, created_at: post.created_at,
@@ -67,12 +72,14 @@ router.post('/:id/like', async (req, res) => {
 
     if (existing) {
       await supabase.from('post_likes').delete().eq('id', existing.id);
-      await supabase.rpc('decrement_likes', { post_id: req.params.id });
     } else {
       await supabase.from('post_likes').insert({ post_id: parseInt(req.params.id), user_id: req.userId });
-      await supabase.rpc('increment_likes', { post_id: req.params.id });
     }
-    res.json({ success: true, liked: !existing });
+    const { count } = await supabase
+      .from('post_likes')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', req.params.id);
+    res.json({ success: true, liked: !existing, likes: count || 0 });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
