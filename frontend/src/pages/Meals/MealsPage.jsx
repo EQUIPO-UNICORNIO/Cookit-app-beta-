@@ -270,10 +270,6 @@ export default function MealsPage() {
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Mis Menús</h1>
           <p className="text-sm text-gray-500 font-medium">{dayMeals.length} comida(s) para {selectedDay}</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditing(null); setForm({ name: '', day: selectedDay, meal_type: 'comida', recipe: '', ingredients: '', instructions: '', photo: '' }); }}
-          className="neo-btn-primary !p-3 !rounded-xl">
-          <span className="material-symbols-outlined">add</span>
-        </button>
       </div>
 
       <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
@@ -291,10 +287,6 @@ export default function MealsPage() {
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-gray-300">restaurant_menu</span>
           <p className="text-gray-400 font-bold mt-2">Sin comidas para {selectedDay}</p>
-          <p className="text-gray-300 text-sm mt-1"></p>
-          <button onClick={() => { setShowForm(true); setForm({ ...form, day: selectedDay }); setTimeout(suggestFromPantry, 100); }} className="neo-btn-primary !py-2 !px-4 !text-sm mt-3">
-            Sugerir comida
-          </button>
         </div>
       )}
 
