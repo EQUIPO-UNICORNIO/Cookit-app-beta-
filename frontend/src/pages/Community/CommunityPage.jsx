@@ -247,7 +247,7 @@ export default function CommunityPage() {
               <button onClick={e => { e.stopPropagation(); setExpandedComments(prev => ({ ...prev, [post.id]: !prev[post.id] })); }} className="neo-btn !py-1 !px-2.5 !text-xs flex items-center gap-1 !bg-gray-50 !text-gray-500 !border-gray-300">
                 <span className="material-symbols-outlined text-sm">chat_bubble_outline</span> {post.comments?.length || 0}
               </button>
-              {user && post.user_name !== user.name && (
+              {user && (
                 <button onClick={e => { e.stopPropagation(); handleSave(post.id); }} disabled={saving[post.id]}
                   className="neo-btn !py-1 !px-2.5 !text-xs flex items-center gap-1 !bg-primary-50 !text-primary-600 !border-primary-300 ml-auto disabled:opacity-30">
                   <span className="material-symbols-outlined text-sm">bookmark_add</span> {saving[post.id] ? 'Guardando...' : 'Guardar'}
