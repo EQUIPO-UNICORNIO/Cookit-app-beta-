@@ -260,7 +260,7 @@ export default function MealsPage() {
             <button onClick={() => setCookingStep(Math.max(0, cookingStep - 1))} disabled={cookingStep <= 0}
               className="neo-btn !bg-gray-100 text-black flex-1 disabled:opacity-30">Anterior</button>
             <button onClick={() => cookingStep < steps.length - 1 ? setCookingStep(cookingStep + 1) : (setSelectedMeal(null), setCookingStep(0))}
-              className="neo-btn !bg-primary-600 text-black flex-1">
+              className="neo-btn !bg-primary-600 text-white flex-1">
               {cookingStep >= steps.length - 1 ? '¡Completado!' : 'Siguiente'}
             </button>
           </div>
