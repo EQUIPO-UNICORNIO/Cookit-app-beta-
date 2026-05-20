@@ -197,6 +197,12 @@ export default function MealsPage() {
   };
 
   const parseInstructions = (text) => text?.split('\n').filter(l => l.trim()) || [];
+  const estimateTime = (instructions) => {
+    if (!instructions) return null;
+    const steps = parseInstructions(instructions).length;
+    if (steps === 0) return null;
+    return steps * 5 + 5;
+  };
 
   const dayMeals = meals.filter(m => m.day === selectedDay);
 
@@ -219,7 +225,14 @@ export default function MealsPage() {
             <img src={selectedMeal.photo} alt={selectedMeal.name} className="w-full h-48 object-cover rounded-xl mt-3 border-2 border-black" />
           )}
           <h2 className="text-xl font-extrabold mt-2">{selectedMeal.name}</h2>
-          {selectedMeal.recipe && <p className="text-sm text-gray-500 font-medium mt-1">Receta: {selectedMeal.recipe}</p>}
+          <div className="flex items-center gap-3 mt-1">
+            {selectedMeal.recipe && <p className="text-sm text-gray-500 font-medium">Receta: {selectedMeal.recipe}</p>}
+            {estimateTime(selectedMeal.instructions) && (
+              <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">schedule</span> {estimateTime(selectedMeal.instructions)} min
+              </span>
+            )}
+          </div>
           {selectedMeal.day && <p className="text-xs text-gray-400 mt-0.5">Día: {selectedMeal.day}</p>}
 
           {selectedMeal.ingredients?.length > 0 && (
@@ -299,7 +312,14 @@ export default function MealsPage() {
                   {meal.meal_type}
                 </span>
                 <h3 className="font-extrabold text-base mt-1 truncate">{meal.name}</h3>
-                {meal.recipe && <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Receta: {meal.recipe}</p>}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {meal.recipe && <p className="text-xs text-gray-500 font-medium truncate">{meal.recipe}</p>}
+                  {estimateTime(meal.instructions) && (
+                    <span className="text-xs text-gray-400 font-medium flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-xs">schedule</span> {estimateTime(meal.instructions)} min
+                    </span>
+                  )}
+                </div>
                 {meal.ingredients && meal.ingredients.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {meal.ingredients.slice(0, 3).map((ing, i) => (
