@@ -14,6 +14,22 @@ function getFallbackColor(name) {
   return fallbackColors[Math.abs(hash) % fallbackColors.length];
 }
 
+function normalizeIngredients(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) {
+    const flat = data.flatMap(i => {
+      if (typeof i === 'string') return i.split(',').map(s => s.trim()).filter(Boolean);
+      return [];
+    });
+    return flat;
+  }
+  if (typeof data === 'string') {
+    try { return JSON.parse(data); } catch {}
+    return data.split(',').map(i => i.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function AvatarDisplay({ avatar, name, size = 'md' }) {
   const sizeClass = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm';
   const roundClass = size === 'sm' ? 'rounded-lg' : 'rounded-xl';
@@ -206,12 +222,12 @@ export default function CommunityPage() {
               <img src={post.photo} alt={post.content} className="w-full h-40 object-cover rounded-xl mb-3 border border-gray-200" />
             )}
 
-            {post.ingredients?.length > 0 && (
+            {normalizeIngredients(post.ingredients).length > 0 && (
               <div className="mb-2">
                 <p className="text-xs font-bold text-gray-600 uppercase mb-1">Ingredientes</p>
-                <div className="flex flex-wrap gap-1">
-                  {post.ingredients.map((ing, i) => (
-                    <span key={i} className="text-xs bg-gray-100 dark:bg-gray-300 border border-gray-200 dark:border-gray-400 rounded-lg px-2 py-0.5 font-medium dark:text-black">{ing}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {normalizeIngredients(post.ingredients).map((ing, i) => (
+                    <span key={i} className="text-xs bg-white dark:bg-gray-700 border border-black rounded-md px-2.5 py-1 font-medium">{ing}</span>
                   ))}
                 </div>
               </div>
@@ -299,12 +315,12 @@ export default function CommunityPage() {
             {viewingPost.photo && (
               <img src={viewingPost.photo} alt={viewingPost.content} className="w-full h-48 object-cover rounded-xl mb-4 border border-gray-200" />
             )}
-            {viewingPost.ingredients?.length > 0 && (
+            {normalizeIngredients(viewingPost.ingredients).length > 0 && (
               <div className="mb-4">
                 <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">Ingredientes</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {viewingPost.ingredients.map((ing, i) => (
-                    <span key={i} className="text-sm bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700 rounded-lg px-3 py-1 font-medium text-primary-700 dark:text-primary-300">{ing}</span>
+                  {normalizeIngredients(viewingPost.ingredients).map((ing, i) => (
+                    <span key={i} className="text-sm bg-white dark:bg-gray-700 border border-black rounded-md px-3 py-1 font-medium">{ing}</span>
                   ))}
                 </div>
               </div>
