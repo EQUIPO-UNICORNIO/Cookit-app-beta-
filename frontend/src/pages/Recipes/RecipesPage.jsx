@@ -267,7 +267,7 @@ export default function RecipesPage() {
                 <span className="text-xs font-bold text-primary-600 uppercase bg-primary-50 px-2 py-0.5 rounded-lg border border-primary-200">
                   {selectedRecipe.category}
                 </span>
-                <span className="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center gap-1">
+                <span className="text-xs font-bold text-gray-700 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">schedule</span> {selectedRecipe.time}
                 </span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 ${
@@ -300,12 +300,12 @@ export default function RecipesPage() {
           </div>
         </div>
 
-        <div className="neo-card !bg-primary-50 !border-primary-200 mb-4">
-          <p className="text-xs font-bold text-primary-700 uppercase mb-3">Instrucciones</p>
+        <div className="neo-card !bg-gray-100 dark:!bg-gray-700 !border-gray-300 dark:!border-gray-600 mb-4">
+          <p className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase mb-3">Instrucciones</p>
           <div className="space-y-3">
             {steps.map((step, i) => (
               <div key={i} className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-extrabold">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-500 text-white flex items-center justify-center text-xs font-extrabold">
                   {i + 1}
                 </span>
                 <p className="text-sm text-gray-700 dark:text-gray-200 pt-0.5">{step.replace(/^\d+\.\s*/, '')}</p>
