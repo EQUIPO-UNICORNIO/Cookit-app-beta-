@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
-import { createWorker } from 'tesseract.js';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 const categoryOptions = ['proteina', 'carbohidrato', 'verdura', 'fruta', 'lacteo', 'grasa', 'otro'];
@@ -16,7 +15,7 @@ const SUGGESTED_MEALS = [
   { name: 'Puré de patatas', recipe: 'Puré de patatas', ingredients: ['Patatas', 'Leche', 'Mantequilla', 'Sal', 'Nuez moscada', 'Pimienta'], instructions: '1. Pela y corta las patatas en trozos.\n2. Hiérvelas en agua con sal hasta que estén tiernas.\n3. Escurre y aplasta las patatas.\n4. Añade mantequilla y leche caliente.\n5. Sazona con nuez moscada y pimienta.' },
 ];
 
-const ignoreKeywords = ['total', 'iva', 'subtotal', 'efectivo', 'tarjeta', 'cambio', 'nif', 'cif', 'caja', 'sup', 'op', 'telefono', 'paseo', 'calle', 'gracias', 'ticket', 'factura', 'cliente', 'importe', 'descuento', 'redondo', 'base', 'unidades', 'euros', 'centimos'];
+const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 const matchIngredients = (itemNames, mealIngredients) => {
   const lowerItems = itemNames.map(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
@@ -25,89 +24,6 @@ const matchIngredients = (itemNames, mealIngredients) => {
     return lowerItems.some(item => item.includes(lowerIng) || lowerIng.includes(item));
   });
 };
-
-const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-function preprocessImage(canvas) {
-  const MIN_HEIGHT = 2000;
-  let w = canvas.width, h = canvas.height;
-  if (h < MIN_HEIGHT) {
-    const scale = MIN_HEIGHT / h;
-    w = Math.round(w * scale);
-    h = MIN_HEIGHT;
-    const scaled = document.createElement('canvas');
-    scaled.width = w;
-    scaled.height = h;
-    scaled.getContext('2d').drawImage(canvas, 0, 0, w, h);
-    canvas = scaled;
-  }
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const gray = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-    const light = gray > 180 ? 255 : gray;
-    const dark = light < 40 ? 0 : light;
-    data[i] = data[i + 1] = data[i + 2] = dark;
-  }
-  ctx.putImageData(imageData, 0, 0);
-  return canvas;
-}
-
-function parseLineToProduct(line) {
-  let clean = line.replace(/\s+/g, ' ').trim();
-  if (!clean || clean.length < 5) return null;
-  const lower = normalize(clean);
-  if (ignoreKeywords.some(k => lower.includes(k))) return null;
-  if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda|travesia)/i.test(clean)) return null;
-  const numbers = clean.match(/[\d.,]+/g);
-  if (!numbers || numbers.length === 0) return null;
-  let rawPrice = numbers[numbers.length - 1].replace(/\./g, '').replace(',', '.');
-  let price = parseFloat(rawPrice);
-  if (isNaN(price) || price <= 0 || price > 9999) return null;
-  let name = clean.substring(0, clean.lastIndexOf(numbers[numbers.length - 1])).trim();
-  name = name.replace(/^\d+\s*[xX*]?\s*/, '').trim();
-  if (!name || name.length < 2) return null;
-  const nameLower = normalize(name);
-  if (ignoreKeywords.some(k => nameLower.includes(k))) return null;
-  if (/^[\d\s]+$/.test(name)) return null;
-  if (!/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ]/.test(name)) return null;
-  let quantity = '1';
-  let unit = 'unidad';
-  const qtyMatch = name.match(/^(\d+)\s*(kg|g|l|ml|ud|unidad|unidades|paq|pack|lata|botella|bolsa|pieza|tarro)?\s+/i);
-  if (qtyMatch) {
-    quantity = qtyMatch[1];
-    if (qtyMatch[2]) unit = qtyMatch[2].toLowerCase();
-    name = name.substring(qtyMatch[0].length).trim();
-  }
-  name = name.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ0-9\s]/g, '').trim();
-  if (!name || name.length < 2) return null;
-  return { name, quantity, unit };
-}
-
-function fallbackParseLines(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const items = [];
-  const seen = new Set();
-  for (const line of lines) {
-    let clean = line.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s]/g, '').trim();
-    if (!clean || clean.length < 4) continue;
-    const lower = normalize(clean);
-    if (ignoreKeywords.some(k => lower.includes(k))) continue;
-    if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda)/i.test(clean)) continue;
-    if (/^[\d\s]+$/.test(clean)) continue;
-    const words = clean.split(/\s+/).filter(w => w.length >= 3);
-    if (words.length === 0) continue;
-    const hasVowel = /[aeiouáéíóú]/i.test(clean);
-    if (!hasVowel) continue;
-    const key = normalize(clean);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    items.push({ name: clean, quantity: '1', unit: 'unidad' });
-  }
-  return items.slice(0, 50);
-}
 
 export default function ScannerPage() {
   const navigate = useNavigate();
@@ -130,52 +46,76 @@ export default function ScannerPage() {
 
   const processImage = async (canvas) => {
     setProcessing(true);
-    setOcrProgress('');
+    setOcrProgress('Analizando ticket con IA...');
     setError('');
     try {
-      const processed = preprocessImage(canvas);
-      const worker = await createWorker('spa+eng', 1, {
-        logger: m => {
-          if (m.status) setOcrProgress(m.status + (m.progress ? ` ${Math.round(m.progress * 100)}%` : ''));
+      const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_KEY}`,
+          'HTTP-Referer': window.location.origin,
         },
+        body: JSON.stringify({
+          model: 'google/gemini-2.0-flash-exp:free',
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${base64}` }
+              },
+              {
+                type: 'text',
+                text: `Eres un asistente que extrae productos de tickets de supermercado.
+Extrae SOLO los productos comprados. 
+Ignora completamente: totales, subtotales, IVA, direcciones, fechas, TPV, resto a pagar, artículos vendidos, números de ticket, nombres de cajeros, datos del establecimiento.
+Para cada producto, intenta detectar la cantidad y unidad si aparece en el ticket (ej: "2 kg", "3 ud").
+Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código markdown:
+{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}`
+              }
+            ]
+          }],
+          max_tokens: 1000,
+        })
       });
-      await worker.setParameters({
-        tessedit_pageseg_mode: '6',
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzáéíóúñüÁÉÍÓÚÑÜ0123456789., ',
-        preserve_interword_spaces: '1',
-      });
-      const { data } = await worker.recognize(processed);
-      const text = data.text.trim();
-      worker.terminate();
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error?.message || `Error ${res.status}`);
+      }
+
+      const json = await res.json();
+      const text = json.choices?.[0]?.message?.content || '';
       setRawText(text);
 
-      if (!text || text.length < 5) {
-        setError('No se pudo leer el ticket. Asegurate de que este bien iluminado y enfocado.');
+      const clean = text.replace(/```json|```/g, '').trim();
+      let parsed;
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        throw new Error('La IA no devolvió un formato válido. Intenta con otra foto.');
+      }
+
+      const items = (parsed.productos || [])
+        .filter(p => p.nombre && p.nombre.trim().length > 1)
+        .map(p => ({
+          name: p.nombre.trim(),
+          quantity: p.cantidad || '1',
+          unit: p.unidad || 'unidad',
+          category: 'otro'
+        }));
+
+      if (items.length === 0) {
+        setError('No se detectaron productos. Intenta con una foto más clara y bien encuadrada.');
         setStep('initial');
         setProcessing(false);
         return;
       }
 
-      const lines = text.split('\n').filter(l => l.trim());
-      let items = [];
-      for (const line of lines) {
-        const product = parseLineToProduct(line);
-        if (product) items.push(product);
-        if (items.length >= 50) break;
-      }
-
-      if (items.length === 0) {
-        items = fallbackParseLines(text);
-      }
-
-      if (items.length === 0) {
-        setError('No se detectaron productos en el ticket. Intenta con una foto mas clara.');
-        setStep('initial');
-        setProcessing(false);
-        return;
-      }
-
-      setParsedItems(items.map(i => ({ ...i, category: 'otro' })));
+      setParsedItems(items);
       setStep('review');
       findRecommendations(items);
     } catch (e) {
@@ -372,7 +312,7 @@ export default function ScannerPage() {
               </button>
 
               <p className="text-xs text-gray-400">
-                La imagen se procesa localmente. No se envia a ningun servidor externo.
+                La imagen se analiza con IA para detectar los productos correctamente.
               </p>
             </div>
           ) : (
@@ -399,8 +339,8 @@ export default function ScannerPage() {
           <div className="w-32 h-32 mx-auto rounded-3xl border-4 border-primary-500 bg-primary-50 flex items-center justify-center mb-5 animate-pulse">
             <span className="material-symbols-outlined text-5xl text-primary-500 animate-spin">scan</span>
           </div>
-          <p className="text-primary-600 font-bold mb-1">Leyendo texto...</p>
-          <p className="text-gray-400 text-sm">{ocrProgress || 'Procesando imagen con OCR'}</p>
+          <p className="text-primary-600 font-bold mb-1">Analizando ticket...</p>
+          <p className="text-gray-400 text-sm">{ocrProgress || 'La IA esta leyendo los productos'}</p>
         </div>
       )}
 
@@ -459,7 +399,7 @@ export default function ScannerPage() {
             {rawText && (
               <details className="mt-3">
                 <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 font-medium">
-                  Texto crudo del OCR
+                  Respuesta cruda de la IA
                 </summary>
                 <pre className="text-xs text-gray-500 mt-1 bg-gray-50 dark:bg-gray-700 rounded-xl p-2 border border-gray-200 dark:border-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{rawText}</pre>
               </details>
