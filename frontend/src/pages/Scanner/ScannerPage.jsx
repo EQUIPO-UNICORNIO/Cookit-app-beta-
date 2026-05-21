@@ -59,7 +59,7 @@ export default function ScannerPage() {
           'HTTP-Referer': window.location.origin,
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.0-flash-exp:free',
+          model: 'openrouter/free',
           messages: [{
             role: 'user',
             content: [
