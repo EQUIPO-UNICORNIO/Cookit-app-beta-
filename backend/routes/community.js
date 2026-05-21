@@ -22,6 +22,11 @@ router.get('/', async (req, res) => {
         .eq('user_id', req.userId)
         .maybeSingle();
 
+      const { count } = await supabase
+        .from('post_likes')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', post.id);
+
       const { data: comments } = await supabase
         .from('post_comments')
         .select('id, content, created_at, user_id, users!inner(name, avatar)')
@@ -29,7 +34,7 @@ router.get('/', async (req, res) => {
         .order('created_at', { ascending: true });
 
       return {
-        id: post.id, content: post.content, likes: post.likes,
+        id: post.id, content: post.content, likes: count || 0,
         meal_id: post.meal_id, meal_name: post.meal_name, photo: post.photo,
         ingredients: JSON.parse(post.ingredients || '[]'),
         instructions: post.instructions, created_at: post.created_at,
@@ -67,12 +72,14 @@ router.post('/:id/like', async (req, res) => {
 
     if (existing) {
       await supabase.from('post_likes').delete().eq('id', existing.id);
-      await supabase.rpc('decrement_likes', { post_id: req.params.id });
     } else {
       await supabase.from('post_likes').insert({ post_id: parseInt(req.params.id), user_id: req.userId });
-      await supabase.rpc('increment_likes', { post_id: req.params.id });
     }
-    res.json({ success: true, liked: !existing });
+    const { count } = await supabase
+      .from('post_likes')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', req.params.id);
+    res.json({ success: true, liked: !existing, likes: count || 0 });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -82,10 +89,12 @@ router.post('/:id/comments', async (req, res) => {
     if (!content) return res.status(400).json({ error: 'Contenido requerido' });
     const { data: post } = await supabase.from('community_posts').select('id').eq('id', req.params.id).maybeSingle();
     if (!post) return res.status(404).json({ error: 'Post no encontrado' });
-    const comment = await create('post_comments', {
-      post_id: parseInt(req.params.id), user_id: req.userId, content
-    });
-    res.status(201).json(comment);
+    const { data: inserted, error } = await supabase
+      .from('post_comments')
+      .insert({ post_id: parseInt(req.params.id), user_id: req.userId, content })
+      .select('id, content, created_at');
+    if (error) throw new Error(error.message);
+    res.status(201).json(inserted[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -106,6 +115,23 @@ router.post('/:id/save', async (req, res) => {
       instructions: post.instructions || '', photo: post.photo || ''
     });
     res.json({ success: true, message: 'Receta guardada en tus menús' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/:id', async (req, res) => {
+  try {
+    const { content, photo, ingredients, instructions } = req.body;
+    if (!content) return res.status(400).json({ error: 'Contenido requerido' });
+    const { data: post } = await supabase.from('community_posts').select('id, user_id').eq('id', req.params.id).maybeSingle();
+    if (!post) return res.status(404).json({ error: 'Post no encontrado' });
+    if (Number(post.user_id) !== Number(req.userId)) return res.status(403).json({ error: 'No autorizado' });
+    const { error } = await supabase.from('community_posts').update({
+      content, photo: photo || '',
+      ingredients: JSON.stringify(ingredients || []),
+      instructions: instructions || ''
+    }).eq('id', req.params.id).eq('user_id', req.userId);
+    if (error) throw new Error(error.message);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

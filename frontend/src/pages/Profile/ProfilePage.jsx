@@ -105,10 +105,10 @@ export default function ProfilePage() {
         <div className="neo-card !p-4 cursor-pointer" onClick={toggle}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center border-2 border-black">
-              <span className="material-symbols-outlined text-primary-600">{dark ? 'dark_mode' : 'light_mode'}</span>
+              <span className="material-symbols-outlined text-primary-600">{dark ? 'light_mode' : 'dark_mode'}</span>
             </div>
             <div>
-              <p className="font-bold text-sm">{dark ? 'Modo Oscuro' : 'Modo Claro'}</p>
+              <p className="font-bold text-sm">{dark ? 'Modo Claro' : 'Modo Oscuro'}</p>
               <p className="text-xs text-gray-500">Toca para cambiar</p>
             </div>
           </div>
@@ -135,6 +135,12 @@ export default function ProfilePage() {
             <p className="text-xs text-gray-500">{user?.email || ''}</p>
           </div>
         </button>
+      </div>
+
+      <div className="text-center mt-6 space-x-3">
+        <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Política de Privacidad</a>
+        <span className="text-xs text-gray-300">·</span>
+        <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Términos de Servicio</a>
       </div>
     </div>
   );

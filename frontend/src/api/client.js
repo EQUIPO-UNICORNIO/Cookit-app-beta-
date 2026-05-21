@@ -17,6 +17,7 @@ export const api = {
   register: (name, email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
   me: () => request('/auth/me'),
   updateAvatar: (avatar) => request('/auth/avatar', { method: 'PUT', body: JSON.stringify({ avatar }) }),
+  resetDev: (email, password) => request('/auth/reset-dev', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
   // Pantry
   getPantry: () => request('/pantry'),
@@ -48,6 +49,7 @@ export const api = {
   likePost: (id) => request(`/community/${id}/like`, { method: 'POST' }),
   addComment: (postId, content) => request(`/community/${postId}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
   savePost: (id) => request(`/community/${id}/save`, { method: 'POST' }),
+  updatePost: (id, data) => request(`/community/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePost: (id) => request(`/community/${id}`, { method: 'DELETE' }),
 
   // Impact

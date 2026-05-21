@@ -15,6 +15,21 @@ const suggestions = [
   { name: 'Puré de patatas', meal_type: 'comida', recipe: 'Puré de patatas', ingredients: ['Patatas', 'Leche', 'Mantequilla', 'Sal', 'Nuez moscada', 'Pimienta'], instructions: '1. Pela y corta las patatas en trozos.\n2. Hiérvelas en agua con sal hasta que estén tiernas.\n3. Escurre y aplasta las patatas.\n4. Añade mantequilla y leche caliente.\n5. Sazona con nuez moscada y pimienta.' },
 ];
 
+const LOCAL_KEY = 'cookit_meals';
+let localIdCounter = 0;
+
+function getLocalMeals() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_KEY)) || []; } catch { return []; }
+}
+
+function saveLocalMeals(meals) {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(meals)); } catch {}
+}
+
+function normalize(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export default function MealsPage() {
   const location = useLocation();
   const [meals, setMeals] = useState([]);
@@ -27,6 +42,7 @@ export default function MealsPage() {
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [cookingStep, setCookingStep] = useState(0);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [fullPhoto, setFullPhoto] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => { loadMeals(); }, []);
@@ -48,7 +64,17 @@ export default function MealsPage() {
   }, [location.state]);
 
   const loadMeals = async () => {
-    try { setMeals(await api.getMeals()); } catch (e) { console.error(e); }
+    let apiMeals = [];
+    try { apiMeals = await api.getMeals(); } catch (e) { console.error(e); }
+    let local = getLocalMeals();
+    const before = local.length;
+    local = local.filter(m => m.day);
+    if (local.length !== before) saveLocalMeals(local);
+    const merged = [...local, ...apiMeals];
+    if (local.length > 0) {
+      localIdCounter = Math.max(...local.map(m => parseInt(m.id.replace('local_', '')) || 0), 0) + 1;
+    }
+    setMeals(merged);
   };
 
   const generateSuggestion = () => {
@@ -66,9 +92,16 @@ export default function MealsPage() {
     try {
       const data = { ...form, ingredients: form.ingredients.split(',').map(i => i.trim()).filter(Boolean) };
       if (editing) {
-        await api.updateMeal(editing, data);
+        if (typeof editing === 'string' && editing.startsWith('local_')) {
+          const local = getLocalMeals().map(m => m.id === editing ? { ...m, ...data } : m);
+          saveLocalMeals(local);
+        } else {
+          await api.updateMeal(editing, data);
+        }
       } else {
-        await api.addMeal(data);
+        const id = `local_${localIdCounter++}`;
+        const local = getLocalMeals();
+        saveLocalMeals([...local, { id, ...data }]);
       }
       setShowForm(false);
       setEditing(null);
@@ -79,6 +112,13 @@ export default function MealsPage() {
   };
 
   const handleDelete = async (id) => {
+    if (typeof id === 'string' && id.startsWith('local_')) {
+      const local = getLocalMeals().filter(m => m.id !== id);
+      saveLocalMeals(local);
+      loadMeals();
+      setConfirmDeleteId(null);
+      return;
+    }
     try { await api.deleteMeal(id); loadMeals(); setConfirmDeleteId(null); } catch (e) { alert(e.message); }
   };
 
@@ -137,7 +177,7 @@ export default function MealsPage() {
             {selectedMeal.meal_type}
           </span>
           {selectedMeal.photo && (
-            <img src={selectedMeal.photo} alt={selectedMeal.name} className="w-full h-48 object-cover rounded-xl mt-3 border-2 border-black" />
+            <img src={selectedMeal.photo} alt={selectedMeal.name} className="w-full h-48 object-cover rounded-xl mt-3 border-2 border-black cursor-pointer" onClick={() => setFullPhoto(selectedMeal.photo)} />
           )}
           <h2 className="text-xl font-extrabold mt-2">{selectedMeal.name}</h2>
           {selectedMeal.recipe && <p className="text-sm text-gray-500 font-medium mt-1">Receta: {selectedMeal.recipe}</p>}
@@ -317,6 +357,12 @@ export default function MealsPage() {
               <button onClick={() => handleDelete(confirmDeleteId)} className="neo-btn !bg-red-500 !text-white flex-1">Aceptar</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {fullPhoto && (
+        <div className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center" onClick={() => setFullPhoto(null)}>
+          <img src={fullPhoto} alt="Foto completa" className="relative max-w-[95vw] max-h-[95vh] object-contain" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

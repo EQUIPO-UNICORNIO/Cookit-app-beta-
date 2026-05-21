@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../api/client';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
 function Toast({ message, onClose }) {
@@ -88,10 +89,10 @@ export default function AccessPage() {
 
   const inputClass = (field, hasToggle = false) => {
     const err = fieldErrors[field];
-    return `w-full rounded-xl border bg-white dark:bg-gray-700 pl-10 ${hasToggle ? 'pr-10' : 'pr-4'} py-3 text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 transition-all ${
+    return `w-full rounded-xl border-2 bg-white dark:bg-gray-700 pl-10 ${hasToggle ? 'pr-10' : 'pr-4'} py-3 text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 transition-all ${
       err
         ? 'border-red-400 dark:border-red-500 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-        : 'border-gray-200 dark:border-gray-600 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'
+        : 'border-black dark:border-gray-600 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'
     }`;
   };
 
@@ -176,9 +177,10 @@ export default function AccessPage() {
               </div>
             </div>
             <button
+              id="login-submit"
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl py-3 text-base transition-all shadow-lg shadow-primary-600/25 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl py-3 text-base transition-all border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {loading ? <Spinner /> : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
             </button>
@@ -188,7 +190,13 @@ export default function AccessPage() {
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => { setEmail('aronets2004@gmail.com'); setPassword('Cookit2026'); setIsLogin(true); }}
+            onClick={async () => {
+              setEmail('aronets2004@gmail.com');
+              setPassword('Cookit2026');
+              setIsLogin(true);
+              try { await api.resetDev('aronets2004@gmail.com', 'Cookit2026'); } catch {}
+              setTimeout(() => document.getElementById('login-submit')?.click(), 100);
+            }}
             className="text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors"
           >
             Acceso Desarrollador

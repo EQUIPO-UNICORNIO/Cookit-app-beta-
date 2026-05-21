@@ -40,15 +40,12 @@ export default function Layout() {
     <div className="min-h-screen bg-page font-jakarta">
       <Sidebar />
       <div className="md:ml-[70px] lg:ml-[200px] flex flex-col min-h-screen">
-        <header className="sticky top-0 z-40 bg-page/95 backdrop-blur-sm border-b-2 border-black md:border-l-0">
+        <header className="sticky top-0 z-40 bg-page/95 backdrop-blur-sm md:border-l-0">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <Link to="/meals" className="flex items-center gap-2 md:hidden">
               <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
                 <span className="material-symbols-outlined text-white text-lg">restaurant</span>
               </div>
-              <span className="font-extrabold text-lg text-gray-900 dark:text-white">CookIt</span>
-            </Link>
-            <Link to="/meals" className="hidden md:flex items-center gap-2">
               <span className="font-extrabold text-lg text-gray-900 dark:text-white">CookIt</span>
             </Link>
             <Link to="/profile" className="flex items-center gap-2 md:hidden">

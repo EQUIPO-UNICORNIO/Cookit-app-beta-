@@ -30,21 +30,19 @@ body {
 
 @layer components {
   .neo-shadow {
-    box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.15);
+    box-shadow: none;
   }
   .neo-shadow-primary {
-    box-shadow: 3px 3px 0px 0px rgba(0,110,47,0.3);
+    box-shadow: none;
   }
   .neo-shadow-secondary {
-    box-shadow: 3px 3px 0px 0px rgba(157,67,0,0.3);
+    box-shadow: none;
   }
   .neo-btn {
     @apply font-bold rounded-full border-2 border-black px-6 py-3 transition-all duration-200;
-    box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.15);
   }
   .neo-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.15);
+    transform: translate(1px, 1px);
   }
   .neo-btn-primary {
     @apply neo-btn bg-primary-600 text-white border-black;
@@ -55,15 +53,13 @@ body {
   .neo-card {
     background: var(--card);
     @apply rounded-2xl border-2 border-black p-4;
-    box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.1);
   }
   .dark .neo-card {
     border-color: var(--border);
   }
   .neo-input {
-    @apply w-full rounded-xl border-2 px-4 py-3 text-sm font-medium;
+    @apply w-full rounded-xl border-2 border-black px-4 py-3 text-sm font-medium;
     background: var(--input-bg);
-    border-color: var(--border);
     color: var(--text);
   }
   .neo-input:focus {

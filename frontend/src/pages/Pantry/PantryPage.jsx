@@ -25,6 +25,36 @@ const autoCategorize = (name) => {
   return 'Otros';
 };
 
+const LOCAL_KEY = 'cookit_pantry';
+let localIdCounter = 0;
+
+function getLocalPantry() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_KEY)) || []; } catch { return []; }
+}
+
+function saveLocalPantry(items) {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(items)); } catch {}
+}
+
+function daysUntilExpiry(expiryDate) {
+  if (!expiryDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate);
+  expiry.setHours(0, 0, 0, 0);
+  return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+}
+
+function isExpiringSoon(expiryDate) {
+  const days = daysUntilExpiry(expiryDate);
+  return days !== null && days >= 0 && days <= 3;
+}
+
+function isExpired(expiryDate) {
+  const days = daysUntilExpiry(expiryDate);
+  return days !== null && days < 0;
+}
+
 export default function PantryPage() {
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -33,20 +63,45 @@ export default function PantryPage() {
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [sortByExpiry, setSortByExpiry] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => { loadItems(); }, []);
 
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const loadItems = async () => {
-    try { setItems(await api.getPantry()); } catch (e) { console.error(e); }
+    let apiItems = [];
+    try { apiItems = await api.getPantry(); } catch (e) { console.error(e); }
+    let local = getLocalPantry();
+    if (local.length > 0) {
+      localIdCounter = Math.max(...local.map(m => parseInt(m.id.replace('local_', '')) || 0), 0) + 1;
+    }
+    setItems([...local, ...apiItems]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (editing) {
-        await api.updatePantryItem(editing, form);
+        if (typeof editing === 'string' && editing.startsWith('local_')) {
+          const local = getLocalPantry();
+          const updated = local.map(m => m.id === editing ? { ...m, ...form } : m);
+          saveLocalPantry(updated);
+        } else {
+          await api.updatePantryItem(editing, form);
+        }
       } else {
-        await api.addPantryItem(form);
+        const saved = await api.addPantryItem(form).catch(() => null);
+        if (!saved && form.name) {
+          const id = 'local_' + (++localIdCounter);
+          const local = getLocalPantry();
+          local.push({ id, ...form, created_at: new Date().toISOString() });
+          saveLocalPantry(local);
+        }
       }
       setShowForm(false);
       setEditing(null);
@@ -56,6 +111,13 @@ export default function PantryPage() {
   };
 
   const handleDelete = async (id) => {
+    if (typeof id === 'string' && id.startsWith('local_')) {
+      const local = getLocalPantry().filter(m => m.id !== id);
+      saveLocalPantry(local);
+      setItems(prev => prev.filter(m => m.id !== id));
+      setConfirmDeleteId(null);
+      return;
+    }
     try { await api.deletePantryItem(id); loadItems(); setConfirmDeleteId(null); } catch (e) { alert(e.message); }
   };
 
@@ -73,16 +135,29 @@ export default function PantryPage() {
     setForm(prev => ({ ...prev, name, category: autoCategorize(name) }));
   };
 
-  const filtered = items.filter(i =>
+  let filtered = items.filter(i =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     i.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const grouped = filtered.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
-    return acc;
-  }, {});
+  if (sortByExpiry) {
+    filtered = [...filtered].sort((a, b) => {
+      const da = daysUntilExpiry(a.expiry_date);
+      const db = daysUntilExpiry(b.expiry_date);
+      if (da === null && db === null) return 0;
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    });
+  }
+
+  const grouped = sortByExpiry
+    ? { 'Por caducidad': filtered }
+    : filtered.reduce((acc, item) => {
+        if (!acc[item.category]) acc[item.category] = [];
+        acc[item.category].push(item);
+        return acc;
+      }, {});
 
   if (selectedItem) {
     return (
@@ -148,13 +223,23 @@ export default function PantryPage() {
         </button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Buscar en la despensa..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="neo-input mb-4"
-      />
+      <div className="flex gap-2 mb-2">
+        <input
+          type="text"
+          placeholder="Buscar en la despensa..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="neo-input flex-1"
+        />
+        <button
+          onClick={() => setSortByExpiry(!sortByExpiry)}
+          className={`neo-btn !py-2 !px-3 !text-xs whitespace-nowrap ${sortByExpiry ? '!bg-orange-100 !text-orange-700 !border-orange-400' : ''}`}
+        >
+          <span className="material-symbols-outlined text-sm align-text-bottom">schedule</span> Prioridad Caducidad
+        </button>
+      </div>
+
+
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onClick={() => setShowForm(false)}>
@@ -185,7 +270,7 @@ export default function PantryPage() {
       {Object.entries(grouped).map(([cat, catItems]) => (
         <div key={cat} className="mb-4">
           <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">{categoryIcons[cat] || 'inventory_2'}</span> {cat}
+            <span className="material-symbols-outlined text-sm">{sortByExpiry ? 'schedule' : (categoryIcons[cat] || 'inventory_2')}</span> {cat}
           </h2>
           <div className="space-y-2">
             {catItems.map(item => (
@@ -195,7 +280,22 @@ export default function PantryPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm truncate">{item.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-white font-medium">{item.quantity} {item.unit}{item.expiry_date ? ` · Vence: ${item.expiry_date}` : ''}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <span className="text-xs text-gray-400 font-medium flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-xs">{categoryIcons[item.category] || 'inventory_2'}</span> {item.category}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-white font-medium">{item.quantity} {item.unit}{item.expiry_date ? ` · Vence: ${item.expiry_date}` : ''}</span>
+                  </div>
+                  {item.expiry_date && isExpired(item.expiry_date) && (
+                    <span className="text-xs font-bold text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded-lg border border-gray-400 inline-flex items-center gap-0.5 mt-0.5 line-through">
+                      <span className="material-symbols-outlined text-xs">block</span> ¡Producto caducado!
+                    </span>
+                  )}
+                  {item.expiry_date && !isExpired(item.expiry_date) && isExpiringSoon(item.expiry_date) && (
+                    <span className="text-xs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-lg border border-red-300 inline-flex items-center gap-0.5 mt-0.5">
+                      <span className="material-symbols-outlined text-xs">warning</span> ¡Consumir pronto!
+                    </span>
+                  )}
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); confirmDelete(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0">
                   <span className="material-symbols-outlined text-sm">delete</span>
@@ -223,6 +323,14 @@ export default function PantryPage() {
               <button onClick={cancelDelete} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
               <button onClick={() => handleDelete(confirmDeleteId)} className="neo-btn !bg-red-500 !text-white flex-1">Aceptar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] pointer-events-none">
+          <div className="bg-primary-600 text-white font-bold text-sm px-5 py-3 rounded-2xl border-2 border-primary-800 whitespace-nowrap">
+            {toast}
           </div>
         </div>
       )}
