@@ -103,87 +103,111 @@ export default function ScannerPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const processImage = async (canvas) => {
-    setProcessing(true);
-    setOcrProgress('Analizando ticket con IA...');
-    setError('');
-    try {
-      const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+  const FREE_MODELS = [
+    'google/gemma-4-31b-it:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  ];
 
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_KEY}`,
-          'HTTP-Referer': window.location.origin,
-        },
-        body: JSON.stringify({
-          model: 'google/gemma-4-31b-it:free',
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: { url: `data:image/jpeg;base64,${base64}` }
-              },
-              {
-                type: 'text',
-                text: `Eres un asistente que extrae productos de tickets de supermercado.
+  const callOpenRouter = async (model, base64) => {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_KEY}`,
+        'HTTP-Referer': window.location.origin,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
+            { type: 'text', text: `Eres un asistente que extrae productos de tickets de supermercado.
 Extrae SOLO los productos comprados. 
 Ignora completamente: totales, subtotales, IVA, direcciones, fechas, TPV, resto a pagar, artículos vendidos, números de ticket, nombres de cajeros, datos del establecimiento.
 Para cada producto, intenta detectar la cantidad y unidad si aparece en el ticket (ej: "2 kg", "3 ud").
 Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código markdown:
-{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}`
-              }
-            ]
-          }],
-          max_tokens: 1000,
-        })
-      });
+{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}` }
+          ]
+        }],
+        max_tokens: 1000,
+      })
+    });
+    return res;
+  };
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error?.message || `Error ${res.status}`);
-      }
+  const parseResponse = (text) => {
+    const clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : clean);
+  };
 
-      const json = await res.json();
-      const text = json.choices?.[0]?.message?.content || '';
-      const usedModel = json.model || json.choices?.[0]?.model || 'unknown';
-      setRawText(text + `\n\n[Modelo usado: ${usedModel}]`);
+  const processImage = async (canvas) => {
+    setProcessing(true);
+    setError('');
+    const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
 
-      const clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : clean;
-      let parsed;
+    for (let attempt = 0; attempt < FREE_MODELS.length; attempt++) {
+      const model = FREE_MODELS[attempt];
+      setOcrProgress(`Analizando con ${model.split('/')[1] || model}...`);
       try {
-        parsed = JSON.parse(jsonStr);
-      } catch {
-        const preview = text.substring(0, 300);
-        throw new Error(`La IA no devolvió JSON válido. Modelo: ${usedModel}. Respuesta: ${preview}...`);
-      }
+        const res = await callOpenRouter(model, base64);
 
-      const items = (parsed.productos || [])
-        .filter(p => p.nombre && p.nombre.trim().length > 1)
-        .map(p => ({
-          name: p.nombre.trim(),
-          quantity: p.cantidad || '1',
-          unit: p.unidad || 'unidad',
-          category: 'otro'
-        }));
+        if (!res.ok) {
+          const errData = await res.json();
+          const errMsg = errData.error?.message || `Error ${res.status}`;
+          if (attempt < FREE_MODELS.length - 1) {
+            setOcrProgress(`${model.split('/')[1]} falló, probando siguiente...`);
+            continue;
+          }
+          throw new Error(JSON.stringify({model, error: errData, status: res.status}));
+        }
 
-      if (items.length === 0) {
-        setError(t('scanner.errorDetectProducts'));
-        setStep('initial');
+        const json = await res.json();
+        const text = json.choices?.[0]?.message?.content || '';
+        const usedModel = json.model || 'unknown';
+        setRawText(text + `\n\n[Modelo usado: ${usedModel}]`);
+
+        let parsed;
+        try {
+          parsed = parseResponse(text);
+        } catch {
+          if (attempt < FREE_MODELS.length - 1) {
+            setOcrProgress('Error de formato, probando otro modelo...');
+            continue;
+          }
+          const preview = text.substring(0, 300);
+          throw new Error(`JSON inválido. Modelo: ${usedModel}. Respuesta: ${preview}...`);
+        }
+
+        const items = (parsed.productos || [])
+          .filter(p => p.nombre && p.nombre.trim().length > 1)
+          .map(p => ({
+            name: p.nombre.trim(),
+            quantity: p.cantidad || '1',
+            unit: p.unidad || 'unidad',
+            category: 'otro'
+          }));
+
+        if (items.length === 0) {
+          setError(t('scanner.errorDetectProducts'));
+          setStep('initial');
+          setProcessing(false);
+          return;
+        }
+
+        setParsedItems(items);
+        setStep('review');
+        findRecommendations(items);
         setProcessing(false);
         return;
+      } catch (e) {
+        if (attempt === FREE_MODELS.length - 1) {
+          setError(e.message.includes('JSON') ? e.message : (t('scanner.errorProcessImage') + e.message));
+          setStep('initial');
+        }
       }
-
-      setParsedItems(items);
-      setStep('review');
-      findRecommendations(items);
-    } catch (e) {
-      setError(t('scanner.errorProcessImage') + e.message);
-      setStep('initial');
     }
     setProcessing(false);
   };
