@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 const mealTypes = ['desayuno', 'almuerzo', 'comida', 'merienda', 'cena'];
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -32,6 +33,7 @@ function normalize(s) {
 
 export default function MealsPage() {
   const location = useLocation();
+  const { t } = useTranslation();
   const [meals, setMeals] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);

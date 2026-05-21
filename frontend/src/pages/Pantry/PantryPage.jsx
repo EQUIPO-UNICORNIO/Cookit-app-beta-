@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 const categories = ['Proteínas', 'Frutas y Verduras', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Otros'];
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
@@ -56,6 +57,7 @@ function isExpired(expiryDate) {
 }
 
 export default function PantryPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -163,7 +165,7 @@ export default function PantryPage() {
     return (
       <div>
         <button onClick={() => setSelectedItem(null)} className="neo-btn !bg-gray-100 dark:!bg-gray-300 !py-2 !px-3 !text-sm mb-4 dark:!text-black">
-          <span className="material-symbols-outlined text-sm align-text-bottom">arrow_back</span> Volver
+          <span className="material-symbols-outlined text-sm align-text-bottom">arrow_back</span> {t('common.back')}
         </button>
 
         <div className="neo-card mb-4">
@@ -179,12 +181,12 @@ export default function PantryPage() {
 
           <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Cantidad</p>
+              <p className="text-xs text-gray-500 font-medium">{t('common.quantity')}</p>
               <p className="font-bold text-lg dark:text-black">{selectedItem.quantity} {selectedItem.unit}</p>
             </div>
             {selectedItem.expiry_date && (
               <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                <p className="text-xs text-gray-500 font-medium">Vence</p>
+                <p className="text-xs text-gray-500 font-medium">{t('common.expiry')}</p>
                 <p className="font-bold text-lg">{selectedItem.expiry_date}</p>
               </div>
             )}
@@ -192,19 +194,19 @@ export default function PantryPage() {
 
           {selectedItem.notes && (
             <div className="mt-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Notas</p>
+              <p className="text-xs text-gray-500 font-medium">{t('common.notes')}</p>
               <p className="text-sm font-medium">{selectedItem.notes}</p>
             </div>
           )}
 
           {selectedItem.created_at && (
-            <p className="text-xs text-gray-400 mt-3">Agregado el {new Date(selectedItem.created_at).toLocaleDateString()}</p>
+            <p className="text-xs text-gray-400 mt-3">{t('common.addedOn')} {new Date(selectedItem.created_at).toLocaleDateString()}</p>
           )}
         </div>
 
         <div className="flex gap-2">
-          <button onClick={() => { handleEdit(selectedItem); setSelectedItem(null); }} className="neo-btn-primary flex-1">Editar</button>
-           <button onClick={() => { confirmDelete(selectedItem.id); setSelectedItem(null); }} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 flex-1">Eliminar</button>
+          <button onClick={() => { handleEdit(selectedItem); setSelectedItem(null); }} className="neo-btn-primary flex-1">{t('common.edit')}</button>
+           <button onClick={() => { confirmDelete(selectedItem.id); setSelectedItem(null); }} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 flex-1">{t('common.delete')}</button>
         </div>
       </div>
     );
@@ -214,8 +216,8 @@ export default function PantryPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Tu Despensa</h1>
-          <p className="text-sm text-gray-500 font-medium">{items.length} items</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('pantry.title')}</h1>
+          <p className="text-sm text-gray-500 font-medium">{items.length} {t('common.items')}</p>
         </div>
         <button onClick={() => { setShowForm(true); setEditing(null); setForm({ name: '', category: 'Otros', quantity: '1', unit: 'unidad', expiry_date: '', notes: '' }); }}
           className="neo-btn-primary !p-3 !rounded-xl">
@@ -226,7 +228,7 @@ export default function PantryPage() {
       <div className="flex gap-2 mb-2">
         <input
           type="text"
-          placeholder="Buscar en la despensa..."
+          placeholder={t('pantry.searchPantry')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="neo-input flex-1"
@@ -235,7 +237,7 @@ export default function PantryPage() {
           onClick={() => setSortByExpiry(!sortByExpiry)}
           className={`neo-btn !py-2 !px-3 !text-xs whitespace-nowrap ${sortByExpiry ? '!bg-orange-100 !text-orange-700 !border-orange-400' : ''}`}
         >
-          <span className="material-symbols-outlined text-sm align-text-bottom">schedule</span> Prioridad Caducidad
+          <span className="material-symbols-outlined text-sm align-text-bottom">schedule</span> {t('pantry.expiryPriority')}
         </button>
       </div>
 
@@ -244,9 +246,9 @@ export default function PantryPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-20 border-t-2 border-black max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-extrabold mb-4">{editing ? 'Editar Item' : 'Nuevo Item'}</h2>
+            <h2 className="text-lg font-extrabold mb-4">{editing ? t('pantry.editItem') : t('pantry.newItem')}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <input className="neo-input" placeholder="Nombre del item" value={form.name} onChange={handleNameChange} required />
+              <input className="neo-input" placeholder={t('pantry.itemName')} value={form.name} onChange={handleNameChange} required />
               <div className="flex gap-2">
                 <select className="neo-input flex-1" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
                   {categories.map(c => <option key={c}>{c}</option>)}
@@ -257,10 +259,10 @@ export default function PantryPage() {
                 </select>
               </div>
               <input className="neo-input" type="date" value={form.expiry_date} onChange={e => setForm({...form, expiry_date: e.target.value})} />
-              <input className="neo-input" placeholder="Notas (opcional)" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
+              <input className="neo-input" placeholder={t('pantry.optionalNotes')} value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
               <div className="flex gap-2 sticky bottom-0 bg-white pt-2">
-                <button type="submit" className="neo-btn-primary flex-1">{editing ? 'Guardar' : 'Agregar'}</button>
-                <button type="button" onClick={() => setShowForm(false)} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
+                <button type="submit" className="neo-btn-primary flex-1">{editing ? t('common.save') : t('common.add')}</button>
+                <button type="button" onClick={() => setShowForm(false)} className="neo-btn !bg-gray-100 flex-1">{t('common.cancel')}</button>
               </div>
             </form>
           </div>
@@ -309,19 +311,19 @@ export default function PantryPage() {
       {items.length === 0 && !showForm && (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-gray-300">kitchen</span>
-          <p className="text-gray-400 font-bold mt-2">Tu despensa está vacía</p>
-          <p className="text-gray-300 text-sm">Agrega tus primeros items</p>
+          <p className="text-gray-400 font-bold mt-2">{t('pantry.emptyPantry')}</p>
+          <p className="text-gray-300 text-sm">{t('pantry.addFirstItems')}</p>
         </div>
       )}
 
       {confirmDeleteId !== null && (
         <div className="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-4" onClick={cancelDelete}>
           <div className="bg-white rounded-2xl p-5 max-w-xs w-full shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="font-extrabold text-base text-gray-900 text-center mb-1">Eliminar este item?</h3>
-            <p className="text-sm text-gray-500 text-center mb-5">Esta acción no se puede deshacer.</p>
+            <h3 className="font-extrabold text-base text-gray-900 text-center mb-1">{t('pantry.deleteItem')}</h3>
+            <p className="text-sm text-gray-500 text-center mb-5">{t('common.cannotUndo')}</p>
             <div className="flex gap-2">
-              <button onClick={cancelDelete} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
-              <button onClick={() => handleDelete(confirmDeleteId)} className="neo-btn !bg-red-500 !text-white flex-1">Aceptar</button>
+              <button onClick={cancelDelete} className="neo-btn !bg-gray-100 flex-1">{t('common.cancel')}</button>
+              <button onClick={() => handleDelete(confirmDeleteId)} className="neo-btn !bg-red-500 !text-white flex-1">{t('common.accept')}</button>
             </div>
           </div>
         </div>

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 const challengeTemplates = [
-  { title: 'Cocina 5 recetas nuevas', description: 'Prueba 5 recetas que nunca hayas hecho', goal: 5 },
-  { title: 'Reduce el desperdicio', description: 'Usa todos los ingredientes de tu despensa', goal: 7 },
-  { title: 'Semana sin carne', description: 'Platos vegetarianos por 7 días', goal: 7 },
-  { title: 'Desayunos saludables', description: 'Prepara desayunos nutritivos', goal: 5 },
-  { title: 'Hidratación diaria', description: 'Bebe 2L de agua al día', goal: 7 },
+  { title: 'challenges.templates.cook5', description: 'challenges.templates.cook5Desc', goal: 5 },
+  { title: 'challenges.templates.reduceWaste', description: 'challenges.templates.reduceWasteDesc', goal: 7 },
+  { title: 'challenges.templates.noMeat', description: 'challenges.templates.noMeatDesc', goal: 7 },
+  { title: 'challenges.templates.healthyBreakfast', description: 'challenges.templates.healthyBreakfastDesc', goal: 5 },
+  { title: 'challenges.templates.hydration', description: 'challenges.templates.hydrationDesc', goal: 7 },
 ];
 
 export default function ChallengesPage() {
+  const { t } = useTranslation();
   const [challenges, setChallenges] = useState([]);
 
   useEffect(() => { loadChallenges(); }, []);
@@ -33,26 +35,26 @@ export default function ChallengesPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este reto?')) return;
+    if (!confirm(t('challenges.deleteConfirm'))) return;
     try { await api.deleteChallenge(id); loadChallenges(); } catch (e) { alert(e.message); }
   };
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Retos y Logros</h1>
+      <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">{t('challenges.title')}</h1>
 
       <div className="mb-6">
-        <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-2">Retos Disponibles</h2>
+        <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-2">{t('challenges.available')}</h2>
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {challengeTemplates.map((t, i) => (
+          {challengeTemplates.map((tmpl, i) => (
             <button
               key={i}
-              onClick={() => addChallenge(t)}
+              onClick={() => addChallenge({ title: t(tmpl.title), description: t(tmpl.description), goal: tmpl.goal })}
               className="flex-shrink-0 neo-card !p-3 w-44 text-left hover:bg-primary-50 transition-colors"
             >
               <span className="material-symbols-outlined text-primary-600 mb-1">emoji_events</span>
-              <p className="font-bold text-xs">{t.title}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">{t.description}</p>
+              <p className="font-bold text-xs">{t(tmpl.title)}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{t(tmpl.description)}</p>
             </button>
           ))}
         </div>
@@ -60,7 +62,7 @@ export default function ChallengesPage() {
 
       {challenges.length > 0 && (
         <div>
-          <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-2">Tus Retos Activos</h2>
+          <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-2">{t('challenges.active')}</h2>
           <div className="space-y-3">
             {challenges.map(challenge => {
               const progress = Math.min((challenge.progress / challenge.goal) * 100, 100);
@@ -79,7 +81,7 @@ export default function ChallengesPage() {
                   {challenge.completed ? (
                     <div className="bg-primary-50 border-2 border-primary-500 rounded-xl p-3 text-center">
                       <span className="material-symbols-outlined text-primary-600">celebration</span>
-                      <p className="font-bold text-primary-700 text-sm">¡Completado!</p>
+                      <p className="font-bold text-primary-700 text-sm">{t('challenges.completed')}</p>
                     </div>
                   ) : (
                     <>
@@ -111,8 +113,8 @@ export default function ChallengesPage() {
       {challenges.length === 0 && (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-gray-300">emoji_events</span>
-          <p className="text-gray-400 font-bold mt-2">Sin retos activos</p>
-          <p className="text-gray-300 text-sm">Selecciona un reto de arriba para empezar</p>
+          <p className="text-gray-400 font-bold mt-2">{t('challenges.noActive')}</p>
+          <p className="text-gray-300 text-sm">{t('challenges.selectChallenge')}</p>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 const substitutionDB = {
   'huevo': ['puré de manzana', 'plátano maduro', 'semillas de lino + agua', 'tofu sedoso', 'yogurt'],
@@ -15,6 +16,7 @@ const substitutionDB = {
 };
 
 export default function SubstitutionPage() {
+  const { t } = useTranslation();
   const [substitutions, setSubstitutions] = useState([]);
   const [ingredient, setIngredient] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -52,16 +54,16 @@ export default function SubstitutionPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Sustitución de Ingredientes</h1>
-          <p className="text-sm text-gray-500 font-medium">Alternativas inteligentes</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('substitution.title')}</h1>
+          <p className="text-sm text-gray-500 font-medium">{t('substitution.subtitle')}</p>
         </div>
       </div>
 
       <div className="neo-card mb-6">
-        <h2 className="font-extrabold text-sm mb-3">¿Qué ingrediente necesitas sustituir?</h2>
+        <h2 className="font-extrabold text-sm mb-3">{t('substitution.question')}</h2>
         <input
           type="text"
-          placeholder="Ej: huevo, leche, harina..."
+          placeholder={t('substitution.placeholder')}
           value={ingredient}
           onChange={e => handleSearch(e.target.value)}
           className="neo-input mb-3"
@@ -69,7 +71,7 @@ export default function SubstitutionPage() {
 
         {suggestions.length > 0 && (
           <div>
-            <p className="text-xs font-bold text-gray-500 mb-2">Sugerencias:</p>
+            <p className="text-xs font-bold text-gray-500 mb-2">{t('substitution.suggestions')}</p>
             <div className="space-y-1 mb-3">
               {suggestions.map((s, i) => (
                 <button
@@ -85,20 +87,20 @@ export default function SubstitutionPage() {
             </div>
             {selectedSub && (
               <button onClick={saveSubstitution} className="neo-btn-primary w-full !text-sm !py-2">
-                Guardar Sustitución
+                {t('substitution.saveSubstitution')}
               </button>
             )}
           </div>
         )}
 
         {ingredient && suggestions.length === 0 && (
-          <p className="text-sm text-gray-400 font-medium">No encontramos sustituciones para "{ingredient}"</p>
+          <p className="text-sm text-gray-400 font-medium">{t('substitution.noSubstitutions')} "{ingredient}"</p>
         )}
       </div>
 
       {substitutions.length > 0 && (
         <div>
-          <h2 className="font-extrabold text-sm mb-3 text-gray-600">Tus sustituciones guardadas</h2>
+          <h2 className="font-extrabold text-sm mb-3 text-gray-600">{t('substitution.savedSubstitutions')}</h2>
           <div className="space-y-2">
             {substitutions.map(sub => (
               <div key={sub.id} className="neo-card flex items-center gap-3 !p-3">

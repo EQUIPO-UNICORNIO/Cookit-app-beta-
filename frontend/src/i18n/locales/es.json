@@ -218,5 +218,65 @@
   "errorBoundary": {
     "title": "Algo salió mal",
     "retry": "Reintentar"
+  },
+  "community": {
+    "title": "Comunidad",
+    "shareRecipe": "¿Qué receta quieres compartir?",
+    "ingredientsPlaceholder": "Ingredientes (separados por coma)",
+    "instructionsPlaceholder": "Instrucciones / pasos (uno por línea)",
+    "publish": "Publicar",
+    "saving": "Guardando...",
+    "save": "Guardar",
+    "editPost": "Editar publicación",
+    "changePhoto": "Cambiar foto",
+    "addPhoto": "Añadir foto",
+    "removePhoto": "Quitar foto",
+    "deletePost": "¿Eliminar esta publicación?",
+    "noComments": "Sin comentarios",
+    "writeComment": "Escribe un comentario...",
+    "send": "Enviar",
+    "firstToPost": "Sé el primero en publicar",
+    "shareExperience": "Comparte tu experiencia culinaria",
+    "postEdited": "Publicación editada",
+    "errorPublish": "Error al publicar",
+    "errorLike": "Error al dar like",
+    "errorSave": "Error al guardar",
+    "errorDelete": "Error al eliminar",
+    "error": "Error: "
+  },
+  "challenges": {
+    "title": "Retos y Logros",
+    "available": "Retos Disponibles",
+    "active": "Tus Retos Activos",
+    "noActive": "Sin retos activos",
+    "selectChallenge": "Selecciona un reto de arriba para empezar",
+    "completed": "¡Completado!",
+    "deleteConfirm": "¿Eliminar este reto?",
+    "templates": {
+      "cook5": "Cocina 5 recetas nuevas",
+      "cook5Desc": "Prueba 5 recetas que nunca hayas hecho",
+      "reduceWaste": "Reduce el desperdicio",
+      "reduceWasteDesc": "Usa todos los ingredientes de tu despensa",
+      "noMeat": "Semana sin carne",
+      "noMeatDesc": "Platos vegetarianos por 7 días",
+      "healthyBreakfast": "Desayunos saludables",
+      "healthyBreakfastDesc": "Prepara desayunos nutritivos",
+      "hydration": "Hidratación diaria",
+      "hydrationDesc": "Bebe 2L de agua al día"
+    }
+  },
+  "impact": {
+    "title": "Tu Impacto",
+    "subtitle": "Tu contribución al planeta",
+    "history": "Historial",
+    "register": "Registrar Impacto",
+    "value": "Valor",
+    "optionalDesc": "Descripción (opcional)",
+    "registerBtn": "Registrar",
+    "co2": "CO2 Ahorrado",
+    "water": "Agua Ahorrada",
+    "foodSaved": "Comida Salvada",
+    "mealsCooked": "Comidas Cocinadas",
+    "plasticSaved": "Plástico Evitado"
   }
 }

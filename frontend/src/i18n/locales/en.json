@@ -218,5 +218,65 @@
   "errorBoundary": {
     "title": "Something went wrong",
     "retry": "Retry"
+  },
+  "community": {
+    "title": "Community",
+    "shareRecipe": "What recipe do you want to share?",
+    "ingredientsPlaceholder": "Ingredients (separated by comma)",
+    "instructionsPlaceholder": "Instructions / steps (one per line)",
+    "publish": "Publish",
+    "saving": "Saving...",
+    "save": "Save",
+    "editPost": "Edit post",
+    "changePhoto": "Change photo",
+    "addPhoto": "Add photo",
+    "removePhoto": "Remove photo",
+    "deletePost": "Delete this post?",
+    "noComments": "No comments",
+    "writeComment": "Write a comment...",
+    "send": "Send",
+    "firstToPost": "Be the first to post",
+    "shareExperience": "Share your culinary experience",
+    "postEdited": "Post edited",
+    "errorPublish": "Error publishing",
+    "errorLike": "Error liking",
+    "errorSave": "Error saving",
+    "errorDelete": "Error deleting",
+    "error": "Error: "
+  },
+  "challenges": {
+    "title": "Challenges & Achievements",
+    "available": "Available Challenges",
+    "active": "Your Active Challenges",
+    "noActive": "No active challenges",
+    "selectChallenge": "Select a challenge above to start",
+    "completed": "Completed!",
+    "deleteConfirm": "Delete this challenge?",
+    "templates": {
+      "cook5": "Cook 5 new recipes",
+      "cook5Desc": "Try 5 recipes you've never made",
+      "reduceWaste": "Reduce food waste",
+      "reduceWasteDesc": "Use all ingredients from your pantry",
+      "noMeat": "Meat-free week",
+      "noMeatDesc": "Vegetarian dishes for 7 days",
+      "healthyBreakfast": "Healthy breakfasts",
+      "healthyBreakfastDesc": "Prepare nutritious breakfasts",
+      "hydration": "Daily hydration",
+      "hydrationDesc": "Drink 2L of water daily"
+    }
+  },
+  "impact": {
+    "title": "Your Impact",
+    "subtitle": "Your contribution to the planet",
+    "history": "History",
+    "register": "Register Impact",
+    "value": "Value",
+    "optionalDesc": "Description (optional)",
+    "registerBtn": "Register",
+    "co2": "CO2 Saved",
+    "water": "Water Saved",
+    "foodSaved": "Food Saved",
+    "mealsCooked": "Meals Cooked",
+    "plasticSaved": "Plastic Prevented"
   }
 }

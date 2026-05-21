@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { createWorker } from 'tesseract.js';
+import { useTranslation } from 'react-i18next';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 const categoryOptions = ['proteina', 'carbohidrato', 'verdura', 'fruta', 'lacteo', 'grasa', 'otro'];
@@ -17,6 +19,62 @@ const SUGGESTED_MEALS = [
 
 const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+const ignoreKeywords = ['total', 'iva', 'subtotal', 'efectivo', 'tarjeta', 'cambio', 'nif', 'cif', 'caja', 'sup', 'op', 'telefono', 'paseo', 'calle', 'gracias', 'ticket', 'factura', 'cliente', 'importe', 'descuento', 'redondo', 'base', 'unidades', 'euros', 'centimos'];
+
+function parseLineToProduct(line) {
+  let clean = line.replace(/\s+/g, ' ').trim();
+  if (!clean || clean.length < 5) return null;
+  const lower = normalize(clean);
+  if (ignoreKeywords.some(k => lower.includes(k))) return null;
+  if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda|travesia)/i.test(clean)) return null;
+  const numbers = clean.match(/[\d.,]+/g);
+  if (!numbers || numbers.length === 0) return null;
+  let rawPrice = numbers[numbers.length - 1].replace(/\./g, '').replace(',', '.');
+  let price = parseFloat(rawPrice);
+  if (isNaN(price) || price <= 0 || price > 9999) return null;
+  let name = clean.substring(0, clean.lastIndexOf(numbers[numbers.length - 1])).trim();
+  name = name.replace(/^\d+\s*[xX*]?\s*/, '').trim();
+  if (!name || name.length < 2) return null;
+  const nameLower = normalize(name);
+  if (ignoreKeywords.some(k => nameLower.includes(k))) return null;
+  if (/^[\d\s]+$/.test(name)) return null;
+  if (!/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ]/.test(name)) return null;
+  let quantity = '1';
+  let unit = 'unidad';
+  const qtyMatch = name.match(/^(\d+)\s*(kg|g|l|ml|ud|unidad|unidades|paq|pack|lata|botella|bolsa|pieza|tarro)?\s+/i);
+  if (qtyMatch) {
+    quantity = qtyMatch[1];
+    if (qtyMatch[2]) unit = qtyMatch[2].toLowerCase();
+    name = name.substring(qtyMatch[0].length).trim();
+  }
+  name = name.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ0-9\s]/g, '').trim();
+  if (!name || name.length < 2) return null;
+  return { name, quantity, unit };
+}
+
+function fallbackParseLines(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const items = [];
+  const seen = new Set();
+  for (const line of lines) {
+    let clean = line.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s]/g, '').trim();
+    if (!clean || clean.length < 4) continue;
+    const lower = normalize(clean);
+    if (ignoreKeywords.some(k => lower.includes(k))) continue;
+    if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda)/i.test(clean)) continue;
+    if (/^[\d\s]+$/.test(clean)) continue;
+    const words = clean.split(/\s+/).filter(w => w.length >= 3);
+    if (words.length === 0) continue;
+    const hasVowel = /[aeiouáéíóú]/i.test(clean);
+    if (!hasVowel) continue;
+    const key = normalize(clean);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({ name: clean, quantity: '1', unit: 'unidad' });
+  }
+  return items.slice(0, 50);
+}
+
 const matchIngredients = (itemNames, mealIngredients) => {
   const lowerItems = itemNames.map(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   return mealIngredients.filter(ing => {
@@ -27,6 +85,7 @@ const matchIngredients = (itemNames, mealIngredients) => {
 
 export default function ScannerPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [step, setStep] = useState('initial');
   const [parsedItems, setParsedItems] = useState([]);
   const [rawText, setRawText] = useState('');
@@ -113,7 +172,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
         }));
 
       if (items.length === 0) {
-        setError('No se detectaron productos. Intenta con una foto más clara y bien encuadrada.');
+        setError(t('scanner.errorDetectProducts'));
         setStep('initial');
         setProcessing(false);
         return;
@@ -123,7 +182,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
       setStep('review');
       findRecommendations(items);
     } catch (e) {
-      setError('Error al procesar la imagen: ' + e.message);
+      setError(t('scanner.errorProcessImage') + e.message);
       setStep('initial');
     }
     setProcessing(false);
@@ -144,7 +203,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
       URL.revokeObjectURL(img.src);
       processImage(canvas);
     };
-    img.onerror = () => setError('Error al cargar la imagen');
+    img.onerror = () => setError(t('scanner.errorLoadImage'));
     e.target.value = '';
   };
 
@@ -234,7 +293,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
       }
     } catch {
       setCameraActive(false);
-      setError('No se pudo abrir la camara. Usa la opcion de subir foto.');
+      setError(t('scanner.errorOpenCamera'));
     }
   };
 
@@ -250,14 +309,14 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
     if (!cameraStreamRef.current) return;
     const track = cameraStreamRef.current.getVideoTracks()[0];
     if (!track || !track.getCapabilities().torch) {
-      setError('Flash no disponible en este dispositivo');
+      setError(t('scanner.flashUnavailable'));
       return;
     }
     try {
       await track.applyConstraints({ advanced: [{ torch: !flashOn }] });
       setFlashOn(!flashOn);
     } catch {
-      setError('Error al cambiar el flash');
+      setError(t('scanner.errorFlash'));
     }
   };
 
@@ -280,8 +339,8 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
       <canvas ref={canvasRef} className="hidden" />
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Escaner de Tickets</h1>
-          <p className="text-sm text-gray-500 font-medium">Sube tu ticket de compra</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('scanner.title')}</h1>
+          <p className="text-sm text-gray-500 font-medium">{t('scanner.subtitle')}</p>
         </div>
       </div>
 
@@ -303,21 +362,21 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
               <div className="w-36 h-36 mx-auto rounded-3xl border-4 border-dashed border-gray-300 flex items-center justify-center mb-5">
                 <span className="material-symbols-outlined text-5xl text-gray-300">receipt_long</span>
               </div>
-              <p className="text-gray-500 font-medium mb-6">
-                Toma una foto de tu ticket de compra y los productos se guardaran automaticamente en tu despensa.
-              </p>
+                <p className="text-gray-500 font-medium mb-6">
+                  {t('scanner.ticketDesc')}
+                </p>
 
-              <button onClick={startCamera} className="neo-btn-primary text-base w-full mb-3">
-                <span className="material-symbols-outlined text-base align-text-bottom">photo_camera</span> Abrir camara
-              </button>
+                <button onClick={startCamera} className="neo-btn-primary text-base w-full mb-3">
+                  <span className="material-symbols-outlined text-base align-text-bottom">photo_camera</span> {t('scanner.openCamera')}
+                </button>
 
-              <button onClick={() => fileInputRef.current?.click()} className="neo-btn w-full mb-6">
-                <span className="material-symbols-outlined text-base align-text-bottom">add_a_photo</span> Subir foto
-              </button>
+                <button onClick={() => fileInputRef.current?.click()} className="neo-btn w-full mb-6">
+                  <span className="material-symbols-outlined text-base align-text-bottom">add_a_photo</span> {t('scanner.uploadPhoto')}
+                </button>
 
-              <p className="text-xs text-gray-400">
-                La imagen se analiza con IA para detectar los productos correctamente.
-              </p>
+                <p className="text-xs text-gray-400">
+                  {t('scanner.photoPrivacy')}
+                </p>
             </div>
           ) : (
             <div className="relative -mx-4 rounded-none overflow-hidden border-0 bg-black mb-4" style={{ height: 'calc(100vh - 220px)' }}>
@@ -343,8 +402,8 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
           <div className="w-32 h-32 mx-auto rounded-3xl border-4 border-primary-500 bg-primary-50 flex items-center justify-center mb-5 animate-pulse">
             <span className="material-symbols-outlined text-5xl text-primary-500 animate-spin">scan</span>
           </div>
-          <p className="text-primary-600 font-bold mb-1">Analizando ticket...</p>
-          <p className="text-gray-400 text-sm">{ocrProgress || 'La IA esta leyendo los productos'}</p>
+          <p className="text-primary-600 font-bold mb-1">{t('scanner.readingText')}</p>
+          <p className="text-gray-400 text-sm">{ocrProgress || t('scanner.processingOCR')}</p>
         </div>
       )}
 
@@ -353,11 +412,11 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
           <div className="neo-card mb-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="font-extrabold text-sm">Productos detectados</h2>
-                <p className="text-xs text-gray-500">{parsedItems.length} producto(s) — Revisa y edita antes de guardar</p>
+                <h2 className="font-extrabold text-sm">{t('scanner.detectedProducts')}</h2>
+                <p className="text-xs text-gray-500">{parsedItems.length} {t('scanner.productsReview')}</p>
               </div>
               <button onClick={addItem} className="neo-btn-primary !py-1.5 !px-3 !text-xs">
-                <span className="material-symbols-outlined text-sm align-text-bottom">add</span> Anadir
+                <span className="material-symbols-outlined text-sm align-text-bottom">add</span> {t('scanner.addBtn')}
               </button>
             </div>
 
@@ -369,7 +428,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
                       className="w-full text-sm font-bold bg-transparent border-b border-gray-200 dark:border-gray-600 pb-0.5 mb-1 focus:outline-none focus:border-primary-500 dark:text-white"
                       value={item.name}
                       onChange={e => updateItem(i, 'name', e.target.value)}
-                      placeholder="Nombre del producto"
+                      placeholder={t('scanner.productName')}
                     />
                     <div className="flex gap-1.5 items-center flex-wrap">
                       <input
@@ -403,7 +462,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
             {rawText && (
               <details className="mt-3">
                 <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 font-medium">
-                  Respuesta cruda de la IA
+                  {t('scanner.rawOCR')}
                 </summary>
                 <pre className="text-xs text-gray-500 mt-1 bg-gray-50 dark:bg-gray-700 rounded-xl p-2 border border-gray-200 dark:border-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{rawText}</pre>
               </details>
@@ -414,7 +473,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
             <div className="neo-card mb-4 !border-secondary-300 !bg-secondary-50">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-secondary-600">restaurant</span>
-                <h2 className="font-extrabold text-sm text-secondary-800">Platos que puedes preparar</h2>
+                <h2 className="font-extrabold text-sm text-secondary-800">{t('scanner.dishesYouCanMake')}</h2>
               </div>
               <div className="space-y-2">
                 {recommendations.map((meal, i) => (
@@ -442,7 +501,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
                       onClick={() => navigate('/meals', { state: { suggestedMeal: meal } })}
                       className="mt-2 text-xs font-bold text-secondary-600 flex items-center gap-1"
                     >
-                      <span className="material-symbols-outlined text-sm">add_circle</span> Agregar al plan de comidas
+                      <span className="material-symbols-outlined text-sm">add_circle</span> {t('scanner.addToMealPlan')}
                     </button>
                   </div>
                 ))}
@@ -453,7 +512,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
           {loadingRecommendations && (
             <div className="text-center py-3 mb-4">
               <span className="material-symbols-outlined animate-spin text-secondary-500">sync</span>
-              <span className="text-sm text-secondary-500 ml-2">Buscando platos recomendados...</span>
+              <span className="text-sm text-secondary-500 ml-2">{t('scanner.searchingDishes')}</span>
             </div>
           )}
 
@@ -463,10 +522,10 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
               disabled={saving || parsedItems.every(i => !i.name.trim())}
               className="neo-btn-primary flex-1 disabled:opacity-30"
             >
-              {saving ? 'Guardando...' : `Guardar en Despensa (${parsedItems.filter(i => i.name.trim()).length} items)`}
+              {saving ? t('scanner.saving') : `${t('scanner.saveToPantry')} (${parsedItems.filter(i => i.name.trim()).length} ${t('common.items')})`}
             </button>
             <button onClick={resetAll} className="neo-btn !bg-gray-100 dark:!bg-gray-300 flex-shrink-0 !px-4 dark:!text-black">
-              Cancelar
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -477,14 +536,14 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
           <div className="w-20 h-20 mx-auto rounded-3xl bg-primary-100 border-2 border-primary-500 flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-4xl text-primary-600">check</span>
           </div>
-          <h2 className="text-xl font-extrabold dark:text-white">?Ticket escaneado!</h2>
-          <p className="text-gray-500 dark:text-gray-300 mt-1">{successCount} producto(s) guardado(s) en tu despensa</p>
+          <h2 className="text-xl font-extrabold dark:text-white">{t('scanner.ticketScanned')}</h2>
+          <p className="text-gray-500 dark:text-gray-300 mt-1">{successCount} {t('scanner.productsSaved')}</p>
           <div className="flex flex-col gap-2 mt-6">
             <button onClick={resetAll} className="neo-btn-primary">
-              <span className="material-symbols-outlined text-base align-text-bottom">scan</span> Escanear otro ticket
+              <span className="material-symbols-outlined text-base align-text-bottom">scan</span> {t('scanner.scanAnother')}
             </button>
             <button onClick={() => navigate('/pantry')} className="neo-btn !bg-gray-100 dark:!bg-gray-300 dark:!text-black">
-              <span className="material-symbols-outlined text-base align-text-bottom">kitchen</span> Ir a la despensa
+              <span className="material-symbols-outlined text-base align-text-bottom">kitchen</span> {t('scanner.goToPantry')}
             </button>
           </div>
         </div>

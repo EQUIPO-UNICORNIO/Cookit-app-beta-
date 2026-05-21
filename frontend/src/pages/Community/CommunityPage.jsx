@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const fallbackColors = ['#006e2f', '#9d4300', '#735c00', '#4f46e5', '#0891b2', '#be185d', '#7c3aed', '#db2777'];
 
@@ -62,6 +63,7 @@ function AvatarDisplay({ avatar, name, size = 'md' }) {
 
 export default function CommunityPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
@@ -120,7 +122,7 @@ export default function CommunityPage() {
       setNewIngredients('');
       setNewInstructions('');
       loadPosts();
-    } catch (e) { showToast('Error al publicar'); }
+    } catch (e) { showToast(t('community.errorPublish')); }
   };
 
   const handleLike = async (id) => {
@@ -131,7 +133,7 @@ export default function CommunityPage() {
           ? { ...p, liked: res.liked, likes: res.likes }
           : p
       ));
-    } catch (e) { showToast('Error al dar like'); }
+    } catch (e) { showToast(t('community.errorLike')); }
   };
 
   const handleComment = async (postId) => {
@@ -153,8 +155,8 @@ export default function CommunityPage() {
     setSaving(prev => ({ ...prev, [id]: true }));
     try {
       await api.savePost(id);
-      showToast('Receta guardada en tus menús');
-    } catch (e) { showToast('Error al guardar'); }
+      showToast(t('community.savedToMealPlan'));
+    } catch (e) { showToast(t('community.errorSave')); }
     setSaving(prev => ({ ...prev, [id]: false }));
   };
 
@@ -178,12 +180,12 @@ export default function CommunityPage() {
       });
       setEditingPost(null);
       loadPosts();
-      showToast('Publicación editada');
-    } catch (e) { showToast('Error: ' + e.message); }
+      showToast(t('community.postEdited'));
+    } catch (e) { showToast(t('community.error') + e.message); }
   };
 
   const handleDelete = async (id) => {
-    try { await api.deletePost(id); loadPosts(); setDeleteConfirm(null); } catch (e) { showToast('Error al eliminar'); setDeleteConfirm(null); }
+    try { await api.deletePost(id); loadPosts(); setDeleteConfirm(null); } catch (e) { showToast(t('community.errorDelete')); setDeleteConfirm(null); }
   };
 
   return (
@@ -195,17 +197,17 @@ export default function CommunityPage() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Comunidad</h1>
+      <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">{t('community.title')}</h1>
 
       <form onSubmit={handlePost} className="neo-card mb-4">
         <textarea
-          placeholder="¿Qué receta quieres compartir?"
+          placeholder={t('community.shareRecipe')}
           value={newPost}
           onChange={e => setNewPost(e.target.value)}
           className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm font-medium resize-none min-h-[80px] focus:outline-none focus:border-primary-500"
         />
         <div className="flex gap-2 mt-2">
-          <input className="neo-input flex-1 text-xs" placeholder="Ingredientes (separados por coma)" value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
+          <input className="neo-input flex-1 text-xs" placeholder={t('community.ingredientsPlaceholder')} value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="neo-btn !py-1.5 !px-3 !text-xs !border-secondary-300 text-secondary-600">
             <span className="material-symbols-outlined text-sm align-text-bottom">photo_camera</span>
           </button>
@@ -218,14 +220,14 @@ export default function CommunityPage() {
           </div>
         )}
         <textarea
-          placeholder="Instrucciones / pasos (uno por línea)"
+          placeholder={t('community.instructionsPlaceholder')}
           value={newInstructions}
           onChange={e => setNewInstructions(e.target.value)}
           className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm font-medium resize-none min-h-[60px] focus:outline-none focus:border-primary-500 mt-2"
         />
         <div className="flex items-center gap-2 mt-2">
           <button type="submit" disabled={!newPost.trim()} className="neo-btn-primary !py-1.5 !px-3 !text-xs disabled:opacity-30 ml-auto">
-            Publicar
+            {t('community.publish')}
           </button>
         </div>
       </form>
@@ -259,7 +261,7 @@ export default function CommunityPage() {
 
             {normalizeIngredients(post.ingredients).length > 0 && (
               <div className="mb-2">
-                <p className="text-xs font-bold text-gray-600 dark:text-gray-200 uppercase mb-1">Ingredientes</p>
+                <p className="text-xs font-bold text-gray-600 dark:text-gray-200 uppercase mb-1">{t('common.ingredients')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {normalizeIngredients(post.ingredients).map((ing, i) => (
                     <span key={i} className="text-xs bg-white dark:bg-gray-700 border border-black rounded-md px-2.5 py-1 font-medium">{ing}</span>
@@ -270,7 +272,7 @@ export default function CommunityPage() {
 
             {post.instructions && (
               <div className="mb-3">
-                <p className="text-xs font-bold text-gray-600 dark:text-gray-200 uppercase mb-1">Instrucciones</p>
+                <p className="text-xs font-bold text-gray-600 dark:text-gray-200 uppercase mb-1">{t('common.instructions')}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-200 whitespace-pre-line">{post.instructions}</p>
               </div>
             )}
@@ -285,7 +287,7 @@ export default function CommunityPage() {
               {user && (
                 <button onClick={e => { e.stopPropagation(); handleSave(post.id); }} disabled={saving[post.id]}
                   className="neo-btn !py-1 !px-2.5 !text-xs flex items-center gap-1 !bg-primary-50 !text-primary-600 !border-primary-300 ml-auto disabled:opacity-30">
-                  <span className="material-symbols-outlined text-sm">bookmark_add</span> {saving[post.id] ? 'Guardando...' : 'Guardar'}
+                  <span className="material-symbols-outlined text-sm">bookmark_add</span> {saving[post.id] ? t('community.saving') : t('community.save')}
                 </button>
               )}
             </div>
@@ -302,17 +304,17 @@ export default function CommunityPage() {
                   </div>
                 ))}
                 {(!post.comments || post.comments.length === 0) && (
-                  <p className="text-xs text-gray-400 text-center">Sin comentarios</p>
+                  <p className="text-xs text-gray-400 text-center">{t('community.noComments')}</p>
                 )}
                 <div className="flex gap-2 pt-1">
                   <input
                     className="neo-input !py-1.5 !text-xs flex-1"
-                    placeholder="Escribe un comentario..."
+                    placeholder={t('community.writeComment')}
                     value={commentText[post.id] || ''}
                     onChange={e => setCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
                   />
                   <button onClick={e => { e.stopPropagation(); handleComment(post.id); }} disabled={!commentText[post.id]?.trim()}
-                    className="neo-btn-primary !py-1.5 !px-3 !text-xs disabled:opacity-30">Enviar</button>
+                    className="neo-btn-primary !py-1.5 !px-3 !text-xs disabled:opacity-30">{t('community.send')}</button>
                 </div>
               </div>
             )}
@@ -325,20 +327,20 @@ export default function CommunityPage() {
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-extrabold">Editar publicación</h2>
+              <h2 className="text-lg font-extrabold">{t('community.editPost')}</h2>
               <button onClick={() => setEditingPost(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400">
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
             <form onSubmit={handleEditSubmit} className="space-y-3">
               <textarea className="neo-input min-h-[80px]" value={editContent} onChange={e => setEditContent(e.target.value)} required />
-              <input className="neo-input text-xs" placeholder="Ingredientes (separados por coma)" value={editIngredients} onChange={e => setEditIngredients(e.target.value)} />
+              <input className="neo-input text-xs" placeholder={t('community.ingredientsPlaceholder')} value={editIngredients} onChange={e => setEditIngredients(e.target.value)} />
               <div className="flex gap-2">
                 <button type="button" onClick={() => editPhotoInputRef.current?.click()} className="neo-btn !py-1.5 !px-3 !text-xs">
-                  <span className="material-symbols-outlined text-sm align-text-bottom">add_photo_alternate</span> {editPhoto ? 'Cambiar foto' : 'Añadir foto'}
+                  <span className="material-symbols-outlined text-sm align-text-bottom">add_photo_alternate</span> {editPhoto ? t('community.changePhoto') : t('community.addPhoto')}
                 </button>
                 {editPhoto && <button type="button" onClick={() => setEditPhoto('')} className="neo-btn !py-1.5 !px-3 !text-xs !border-red-300 text-red-500">
-                  <span className="material-symbols-outlined text-sm align-text-bottom">delete</span> Quitar foto
+                  <span className="material-symbols-outlined text-sm align-text-bottom">delete</span> {t('community.removePhoto')}
                 </button>}
                 <input ref={editPhotoInputRef} type="file" accept="image/*" onChange={e => {
                   const file = e.target.files?.[0];
@@ -349,10 +351,10 @@ export default function CommunityPage() {
                 }} className="hidden" />
               </div>
               {editPhoto && <img src={editPhoto} alt="Preview" className="w-full h-20 object-cover rounded-xl border-2 border-primary-300" />}
-              <textarea className="neo-input min-h-[60px]" placeholder="Instrucciones" value={editInstructions} onChange={e => setEditInstructions(e.target.value)} />
+              <textarea className="neo-input min-h-[60px]" placeholder={t('common.instructions')} value={editInstructions} onChange={e => setEditInstructions(e.target.value)} />
               <div className="flex gap-2">
-                <button type="submit" className="neo-btn-primary flex-1">Guardar</button>
-                <button type="button" onClick={() => setEditingPost(null)} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
+                <button type="submit" className="neo-btn-primary flex-1">{t('common.save')}</button>
+                <button type="button" onClick={() => setEditingPost(null)} className="neo-btn !bg-gray-100 flex-1">{t('common.cancel')}</button>
               </div>
             </form>
           </div>
@@ -362,10 +364,10 @@ export default function CommunityPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setDeleteConfirm(null)}>
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
-            <p className="text-lg font-bold mb-6">¿Eliminar esta publicación?</p>
+            <p className="text-lg font-bold mb-6">{t('community.deletePost')}</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeleteConfirm(null)} className="neo-btn !py-2 !px-6 !text-sm">Cancelar</button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="neo-btn !py-2 !px-6 !text-sm !bg-red-500 !text-white !border-red-600 hover:!bg-red-600">Eliminar</button>
+              <button onClick={() => setDeleteConfirm(null)} className="neo-btn !py-2 !px-6 !text-sm">{t('common.cancel')}</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="neo-btn !py-2 !px-6 !text-sm !bg-red-500 !text-white !border-red-600 hover:!bg-red-600">{t('common.delete')}</button>
             </div>
           </div>
         </div>
@@ -390,7 +392,7 @@ export default function CommunityPage() {
             )}
             {normalizeIngredients(viewingPost.ingredients).length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">Ingredientes</p>
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">{t('common.ingredients')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {normalizeIngredients(viewingPost.ingredients).map((ing, i) => (
                     <span key={i} className="text-sm bg-white dark:bg-gray-700 border border-black rounded-md px-3 py-1 font-medium">{ing}</span>
@@ -400,7 +402,7 @@ export default function CommunityPage() {
             )}
             {viewingPost.instructions && (
               <div className="mb-4">
-                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">Instrucciones</p>
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-2">{t('common.instructions')}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-200 whitespace-pre-line leading-relaxed">{viewingPost.instructions}</p>
               </div>
             )}
@@ -410,8 +412,8 @@ export default function CommunityPage() {
       {posts.length === 0 && (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-gray-300">forum</span>
-          <p className="text-gray-400 font-bold mt-2">Sé el primero en publicar</p>
-          <p className="text-gray-300 text-sm">Comparte tu experiencia culinaria</p>
+          <p className="text-gray-400 font-bold mt-2">{t('community.firstToPost')}</p>
+          <p className="text-gray-300 text-sm">{t('community.shareExperience')}</p>
         </div>
       )}
     </div>

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 const categories = ['Verduras', 'Frutas', 'Carnes', 'Lácteos', 'Pan', 'Conservas', 'Congelados', 'Bebidas', 'Especias', 'Otros'];
 
 export default function ShoppingPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [newName, setNewName] = useState('');
   const [filter, setFilter] = useState('all');
@@ -55,12 +57,12 @@ export default function ShoppingPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Lista de Compra</h1>
-          <p className="text-sm text-gray-500 font-medium">{pendingCount} items pendientes</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('shopping.title')}</h1>
+          <p className="text-sm text-gray-500 font-medium">{pendingCount} {t('shopping.pendingItems')}</p>
         </div>
         {items.some(i => i.checked) && (
           <button onClick={clearChecked} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 !py-2 !px-3 !text-xs">
-            Limpiar
+            {t('shopping.clear')}
           </button>
         )}
       </div>
@@ -68,7 +70,7 @@ export default function ShoppingPage() {
       <form onSubmit={addItem} className="flex gap-2 mb-4">
         <input
           type="text"
-          placeholder="Agregar item..."
+          placeholder={t('shopping.addItem')}
           value={newName}
           onChange={e => setNewName(e.target.value)}
           className="neo-input flex-1"
@@ -84,7 +86,7 @@ export default function ShoppingPage() {
             onClick={() => setFilter(f)}
             className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${filter === f ? 'bg-white text-primary-600' : 'text-gray-500'}`}
           >
-            {f === 'all' ? 'Todas' : f === 'pending' ? 'Pendientes' : 'Completadas'}
+            {f === 'all' ? t('shopping.all') : f === 'pending' ? t('shopping.pending') : t('shopping.completed')}
           </button>
         ))}
       </div>
@@ -114,8 +116,8 @@ export default function ShoppingPage() {
       {items.length === 0 && (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-gray-300">shopping_cart</span>
-          <p className="text-gray-400 font-bold mt-2">Lista vacía</p>
-          <p className="text-gray-300 text-sm">Agrega items para tu compra</p>
+          <p className="text-gray-400 font-bold mt-2">{t('shopping.emptyList')}</p>
+          <p className="text-gray-300 text-sm">{t('shopping.addShoppingItems')}</p>
         </div>
       )}
     </div>
