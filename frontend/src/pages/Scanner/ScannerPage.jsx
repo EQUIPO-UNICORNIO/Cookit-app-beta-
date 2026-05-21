@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
-import { createWorker } from 'tesseract.js';
 import { useTranslation } from 'react-i18next';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
@@ -16,64 +15,6 @@ const SUGGESTED_MEALS = [
   { name: 'Lentejas estofadas', recipe: 'Lentejas estofadas', ingredients: ['Lentejas', 'Zanahoria', 'Patata', 'Cebolla', 'Ajo', 'Tomate', 'Pimentón', 'Aceite de oliva', 'Sal'], instructions: '1. Sofríe la cebolla, ajo y zanahoria picados.\n2. Añade el tomate y el pimentón.\n3. Incorpora las lentejas lavadas y la patata.\n4. Cubre con agua y sazona con sal.\n5. Cocina 40 minutos a fuego medio.' },
   { name: 'Puré de patatas', recipe: 'Puré de patatas', ingredients: ['Patatas', 'Leche', 'Mantequilla', 'Sal', 'Nuez moscada', 'Pimienta'], instructions: '1. Pela y corta las patatas en trozos.\n2. Hiérvelas en agua con sal hasta que estén tiernas.\n3. Escurre y aplasta las patatas.\n4. Añade mantequilla y leche caliente.\n5. Sazona con nuez moscada y pimienta.' },
 ];
-
-const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-const ignoreKeywords = ['total', 'iva', 'subtotal', 'efectivo', 'tarjeta', 'cambio', 'nif', 'cif', 'caja', 'sup', 'op', 'telefono', 'paseo', 'calle', 'gracias', 'ticket', 'factura', 'cliente', 'importe', 'descuento', 'redondo', 'base', 'unidades', 'euros', 'centimos'];
-
-function parseLineToProduct(line) {
-  let clean = line.replace(/\s+/g, ' ').trim();
-  if (!clean || clean.length < 5) return null;
-  const lower = normalize(clean);
-  if (ignoreKeywords.some(k => lower.includes(k))) return null;
-  if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda|travesia)/i.test(clean)) return null;
-  const numbers = clean.match(/[\d.,]+/g);
-  if (!numbers || numbers.length === 0) return null;
-  let rawPrice = numbers[numbers.length - 1].replace(/\./g, '').replace(',', '.');
-  let price = parseFloat(rawPrice);
-  if (isNaN(price) || price <= 0 || price > 9999) return null;
-  let name = clean.substring(0, clean.lastIndexOf(numbers[numbers.length - 1])).trim();
-  name = name.replace(/^\d+\s*[xX*]?\s*/, '').trim();
-  if (!name || name.length < 2) return null;
-  const nameLower = normalize(name);
-  if (ignoreKeywords.some(k => nameLower.includes(k))) return null;
-  if (/^[\d\s]+$/.test(name)) return null;
-  if (!/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ]/.test(name)) return null;
-  let quantity = '1';
-  let unit = 'unidad';
-  const qtyMatch = name.match(/^(\d+)\s*(kg|g|l|ml|ud|unidad|unidades|paq|pack|lata|botella|bolsa|pieza|tarro)?\s+/i);
-  if (qtyMatch) {
-    quantity = qtyMatch[1];
-    if (qtyMatch[2]) unit = qtyMatch[2].toLowerCase();
-    name = name.substring(qtyMatch[0].length).trim();
-  }
-  name = name.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ0-9\s]/g, '').trim();
-  if (!name || name.length < 2) return null;
-  return { name, quantity, unit };
-}
-
-function fallbackParseLines(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const items = [];
-  const seen = new Set();
-  for (const line of lines) {
-    let clean = line.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s]/g, '').trim();
-    if (!clean || clean.length < 4) continue;
-    const lower = normalize(clean);
-    if (ignoreKeywords.some(k => lower.includes(k))) continue;
-    if (/^(avda|calle|c\/|plaza|ctra|camino|paseo|ronda)/i.test(clean)) continue;
-    if (/^[\d\s]+$/.test(clean)) continue;
-    const words = clean.split(/\s+/).filter(w => w.length >= 3);
-    if (words.length === 0) continue;
-    const hasVowel = /[aeiouáéíóú]/i.test(clean);
-    if (!hasVowel) continue;
-    const key = normalize(clean);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    items.push({ name: clean, quantity: '1', unit: 'unidad' });
-  }
-  return items.slice(0, 50);
-}
 
 const matchIngredients = (itemNames, mealIngredients) => {
   const lowerItems = itemNames.map(n => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
@@ -103,39 +44,12 @@ export default function ScannerPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const FREE_MODELS = [
-    'google/gemma-4-31b-it:free',
-    'google/gemma-4-26b-a4b-it:free',
-    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-  ];
-
-  const callOpenRouter = async (model, base64) => {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_KEY}`,
-        'HTTP-Referer': window.location.origin,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-            { type: 'text', text: `Eres un asistente que extrae productos de tickets de supermercado.
+  const PROMPT = `Eres un asistente que extrae productos de tickets de supermercado.
 Extrae SOLO los productos comprados. 
 Ignora completamente: totales, subtotales, IVA, direcciones, fechas, TPV, resto a pagar, artículos vendidos, números de ticket, nombres de cajeros, datos del establecimiento.
 Para cada producto, intenta detectar la cantidad y unidad si aparece en el ticket (ej: "2 kg", "3 ud").
 Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código markdown:
-{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}` }
-          ]
-        }],
-        max_tokens: 1000,
-      })
-    });
-    return res;
-  };
+{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}`;
 
   const parseResponse = (text) => {
     const clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
@@ -146,68 +60,74 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
   const processImage = async (canvas) => {
     setProcessing(true);
     setError('');
+    setOcrProgress('Analizando ticket con Gemini...');
     const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+    const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_KEY;
 
-    for (let attempt = 0; attempt < FREE_MODELS.length; attempt++) {
-      const model = FREE_MODELS[attempt];
-      setOcrProgress(`Analizando con ${model.split('/')[1] || model}...`);
+    if (!apiKey) {
+      setError('Falta VITE_GOOGLE_GEMINI_KEY en .env');
+      setProcessing(false);
+      setStep('initial');
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: PROMPT },
+                { inline_data: { mime_type: 'image/jpeg', data: base64 } }
+              ]
+            }]
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json();
+        const msg = errData.error?.message || `Error ${res.status}`;
+        throw new Error(msg);
+      }
+
+      const json = await res.json();
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      setRawText(text);
+
+      let parsed;
       try {
-        const res = await callOpenRouter(model, base64);
+        parsed = parseResponse(text);
+      } catch {
+        const preview = text.substring(0, 300);
+        throw new Error(`JSON inválido. Respuesta: ${preview}...`);
+      }
 
-        if (!res.ok) {
-          const errData = await res.json();
-          const errMsg = errData.error?.message || `Error ${res.status}`;
-          if (attempt < FREE_MODELS.length - 1) {
-            setOcrProgress(`${model.split('/')[1]} falló, probando siguiente...`);
-            continue;
-          }
-          throw new Error(JSON.stringify({model, error: errData, status: res.status}));
-        }
+      const items = (parsed.productos || [])
+        .filter(p => p.nombre && p.nombre.trim().length > 1)
+        .map(p => ({
+          name: p.nombre.trim(),
+          quantity: p.cantidad || '1',
+          unit: p.unidad || 'unidad',
+          category: 'otro'
+        }));
 
-        const json = await res.json();
-        const text = json.choices?.[0]?.message?.content || '';
-        const usedModel = json.model || 'unknown';
-        setRawText(text + `\n\n[Modelo usado: ${usedModel}]`);
-
-        let parsed;
-        try {
-          parsed = parseResponse(text);
-        } catch {
-          if (attempt < FREE_MODELS.length - 1) {
-            setOcrProgress('Error de formato, probando otro modelo...');
-            continue;
-          }
-          const preview = text.substring(0, 300);
-          throw new Error(`JSON inválido. Modelo: ${usedModel}. Respuesta: ${preview}...`);
-        }
-
-        const items = (parsed.productos || [])
-          .filter(p => p.nombre && p.nombre.trim().length > 1)
-          .map(p => ({
-            name: p.nombre.trim(),
-            quantity: p.cantidad || '1',
-            unit: p.unidad || 'unidad',
-            category: 'otro'
-          }));
-
-        if (items.length === 0) {
-          setError(t('scanner.errorDetectProducts'));
-          setStep('initial');
-          setProcessing(false);
-          return;
-        }
-
-        setParsedItems(items);
-        setStep('review');
-        findRecommendations(items);
+      if (items.length === 0) {
+        setError(t('scanner.errorDetectProducts'));
+        setStep('initial');
         setProcessing(false);
         return;
-      } catch (e) {
-        if (attempt === FREE_MODELS.length - 1) {
-          setError(e.message.includes('JSON') ? e.message : (t('scanner.errorProcessImage') + e.message));
-          setStep('initial');
-        }
       }
+
+      setParsedItems(items);
+      setStep('review');
+      findRecommendations(items);
+    } catch (e) {
+      setError('Error: ' + e.message);
+      setStep('initial');
     }
     setProcessing(false);
   };
