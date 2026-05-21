@@ -111,7 +111,16 @@
     "noInstructions": "Sin instrucciones",
     "noStepsDefined": "Este plato no tiene pasos definidos",
     "readingImage": "Leyendo imagen...",
-    "deleteMenu": "¿Eliminar este menú?"
+    "deleteMenu": "¿Eliminar este menú?",
+    "days": {
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado",
+      "sunday": "Domingo"
+    }
   },
   "recipes": {
     "title": "Recetas",

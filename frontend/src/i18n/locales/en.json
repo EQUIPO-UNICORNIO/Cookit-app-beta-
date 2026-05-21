@@ -111,7 +111,16 @@
     "noInstructions": "No instructions",
     "noStepsDefined": "This dish has no defined steps",
     "readingImage": "Reading image...",
-    "deleteMenu": "Delete this meal?"
+    "deleteMenu": "Delete this meal?",
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    }
   },
   "recipes": {
     "title": "Recipes",

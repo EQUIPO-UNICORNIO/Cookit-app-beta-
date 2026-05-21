@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
 
 const mealTypes = ['desayuno', 'almuerzo', 'comida', 'merienda', 'cena'];
-const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const suggestions = [
   { name: 'Tortilla francesa', meal_type: 'desayuno', recipe: 'Tortilla francesa', ingredients: ['Huevos', 'Sal', 'Aceite de oliva'], instructions: '1. Bate los huevos con sal.\n2. Calienta aceite en una sartén antiadherente.\n3. Vierte los huevos y deja cuajar.\n4. Cuando la base esté firme, dobla por la mitad.\n5. Sirve inmediatamente.' },
@@ -38,7 +39,7 @@ export default function MealsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', day: '', meal_type: 'comida', recipe: '', ingredients: '', instructions: '', photo: '' });
-  const [selectedDay, setSelectedDay] = useState(days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
+  const [selectedDay, setSelectedDay] = useState(dayKeys[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
   const [ocrLoading, setOcrLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [selectedMeal, setSelectedMeal] = useState(null);
@@ -240,12 +241,12 @@ export default function MealsPage() {
       </div>
 
       <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {days.map(d => (
-          <button key={d}
-            onClick={() => setSelectedDay(d)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === d ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
+        {dayKeys.map(key => (
+          <button key={key}
+            onClick={() => setSelectedDay(key)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === key ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
           >
-            {d}
+            {t(`meals.days.${key}`)}
           </button>
         ))}
       </div>
@@ -253,7 +254,7 @@ export default function MealsPage() {
       {dayMeals.length === 0 && (
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-gray-300">restaurant_menu</span>
-          <p className="text-gray-400 font-bold mt-2">Sin comidas para {selectedDay}</p>
+          <p className="text-gray-400 font-bold mt-2">{t('meals.noMealsForDay')} {t(`meals.days.${selectedDay}`)}</p>
           <button onClick={() => { setShowForm(true); setForm({ ...form, day: selectedDay }); generateSuggestion(); }} className="neo-btn-primary !py-2 !px-4 !text-sm mt-3">
             Sugerir comida
           </button>
@@ -322,8 +323,8 @@ export default function MealsPage() {
               <input className="neo-input" placeholder="Nombre del plato" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
               <div className="flex gap-2">
                 <select className="neo-input flex-1" value={form.day} onChange={e => setForm({...form, day: e.target.value})}>
-                  <option value="">Sin día</option>
-                  {days.map(d => <option key={d}>{d}</option>)}
+                  <option value="">{t('meals.noDay')}</option>
+                  {dayKeys.map(key => <option key={key} value={key}>{t(`meals.days.${key}`)}</option>)}
                 </select>
                 <select className="neo-input flex-1" value={form.meal_type} onChange={e => setForm({...form, meal_type: e.target.value})}>
                   {mealTypes.map(m => <option key={m}>{m}</option>)}

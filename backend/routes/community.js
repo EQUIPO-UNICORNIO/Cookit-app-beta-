@@ -107,7 +107,7 @@ router.post('/:id/save', async (req, res) => {
       .maybeSingle();
     if (!post) return res.status(404).json({ error: 'Post no encontrado' });
     const ingredients = JSON.parse(post.ingredients || '[]');
-    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const today = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
     await create('meal_plans', {
       user_id: req.userId, name: post.content, day: today, meal_type: 'comida',
