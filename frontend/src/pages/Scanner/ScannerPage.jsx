@@ -44,76 +44,15 @@ export default function ScannerPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const PROMPT = `Eres un asistente que extrae productos de tickets de supermercado.
-Extrae SOLO los productos comprados. 
-Ignora completamente: totales, subtotales, IVA, direcciones, fechas, TPV, resto a pagar, artículos vendidos, números de ticket, nombres de cajeros, datos del establecimiento.
-Para cada producto, intenta detectar la cantidad y unidad si aparece en el ticket (ej: "2 kg", "3 ud").
-Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código markdown:
-{"productos": [{"nombre": "NOMBRE PRODUCTO", "cantidad": "1", "unidad": "unidad"}]}`;
-
-  const parseResponse = (text) => {
-    const clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
-    const jsonMatch = clean.match(/\{[\s\S]*\}/);
-    return JSON.parse(jsonMatch ? jsonMatch[0] : clean);
-  };
-
   const processImage = async (canvas) => {
     setProcessing(true);
     setError('');
-    setOcrProgress('Analizando ticket con Gemini...');
+    setOcrProgress(t('scanner.processingOCR') || 'Analizando ticket...');
     const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
-    const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_KEY;
-
-    if (!apiKey) {
-      setError('Falta VITE_GOOGLE_GEMINI_KEY en .env');
-      setProcessing(false);
-      setStep('initial');
-      return;
-    }
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: PROMPT },
-                { inline_data: { mime_type: 'image/jpeg', data: base64 } }
-              ]
-            }]
-          })
-        }
-      );
-
-      if (!res.ok) {
-        const errData = await res.json();
-        const msg = errData.error?.message || `Error ${res.status}`;
-        throw new Error(msg);
-      }
-
-      const json = await res.json();
-      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      setRawText(text);
-
-      let parsed;
-      try {
-        parsed = parseResponse(text);
-      } catch {
-        const preview = text.substring(0, 300);
-        throw new Error(`JSON inválido. Respuesta: ${preview}...`);
-      }
-
-      const items = (parsed.productos || [])
-        .filter(p => p.nombre && p.nombre.trim().length > 1)
-        .map(p => ({
-          name: p.nombre.trim(),
-          quantity: p.cantidad || '1',
-          unit: p.unidad || 'unidad',
-          category: 'otro'
-        }));
+      const result = await api.processTicket(base64, 'image/jpeg');
+      const items = (result.items || []).filter(i => i.name?.trim());
 
       if (items.length === 0) {
         setError(t('scanner.errorDetectProducts'));
@@ -123,10 +62,11 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
       }
 
       setParsedItems(items);
+      setRawText(items.map(i => `${i.name} (${i.quantity} ${i.unit})`).join('\n'));
       setStep('review');
       findRecommendations(items);
     } catch (e) {
-      setError('Error: ' + e.message);
+      setError(t('scanner.errorProcessImage') + e.message);
       setStep('initial');
     }
     setProcessing(false);
