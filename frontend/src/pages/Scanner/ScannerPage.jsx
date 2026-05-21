@@ -89,14 +89,18 @@ Responde ÚNICAMENTE con JSON válido, sin texto extra, sin bloques de código m
 
       const json = await res.json();
       const text = json.choices?.[0]?.message?.content || '';
-      setRawText(text);
+      const usedModel = json.model || json.choices?.[0]?.model || 'unknown';
+      setRawText(text + `\n\n[Modelo usado: ${usedModel}]`);
 
-      const clean = text.replace(/```json|```/g, '').trim();
+      const clean = text.replace(/```json\s*/gi, '').replace(/```\s*$/g, '').trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : clean;
       let parsed;
       try {
-        parsed = JSON.parse(clean);
+        parsed = JSON.parse(jsonStr);
       } catch {
-        throw new Error('La IA no devolvió un formato válido. Intenta con otra foto.');
+        const preview = text.substring(0, 300);
+        throw new Error(`La IA no devolvió JSON válido. Modelo: ${usedModel}. Respuesta: ${preview}...`);
       }
 
       const items = (parsed.productos || [])
