@@ -278,6 +278,9 @@ export default function PantryPage() {
                     </span>
                   )}
                 </div>
+                <button onClick={(e) => { e.stopPropagation(); api.addShoppingItem({ name: item.name, category: item.category, quantity: item.quantity, unit: item.unit }).then(() => showToast('Añadido a la compra')).catch(() => {}); }} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 flex-shrink-0" title="Añadir a la compra">
+                  <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                </button>
                 <button onClick={(e) => { e.stopPropagation(); confirmDelete(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0">
                   <span className="material-symbols-outlined text-sm">delete</span>
                 </button>
