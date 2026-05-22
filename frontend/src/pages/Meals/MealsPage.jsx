@@ -305,7 +305,7 @@ export default function MealsPage() {
                 )}
               </div>
               {meal.photo && (
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); setFullPhoto(meal.photo); }}>
                   <img src={meal.photo} alt={meal.name} className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
                 </div>
               )}
