@@ -212,7 +212,7 @@ export default function MealsPage() {
                 ))}
           </div>
         </div>
-        </div>
+        )}
 
         {steps.length > 0 && (
           <div className="neo-card !bg-primary-600 !text-white !border-primary-800 mb-3">
@@ -220,6 +220,7 @@ export default function MealsPage() {
             <p className="text-lg font-extrabold mt-1">{steps[cookingStep]}</p>
           </div>
         )}
+        </div>
 
         {steps.length > 0 && (
           <div className="flex gap-2">
