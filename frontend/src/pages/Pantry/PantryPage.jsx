@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
 
-const categories = ['Proteínas', 'Verduras', 'Frutas', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Congelados', 'Bebidas', 'Otros'];
+const categories = ['Carne', 'Marisco', 'Verduras', 'Frutas', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Congelados', 'Bebidas', 'Otros'];
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 
 const categoryIcons = {
-  'Proteínas': 'lunch_dining',
+  'Carne': 'lunch_dining',
+  'Marisco': 'set_meal',
   'Verduras': 'eco',
   'Frutas': 'nutrition',
   'Lácteos': 'water_drop',
@@ -20,7 +21,8 @@ const categoryIcons = {
 
 const autoCategorize = (name) => {
   const n = name.toLowerCase().trim();
-  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón|huevo|chorizo|mortadela|salchichón/i.test(n)) return 'Proteínas';
+  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|chorizo|mortadela|salchichón|butifarra|fuet|longaniza|secreto|presa|costilla|entrecot|rabo|higado|riñón|seso/i.test(n)) return 'Carne';
+  if (/salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón|mejillón|almeja|berberecho|vieira|cigala|centollo|nécora|percebe|navaja|bacaladilla|caballa|rape|rodaballo|besugo|trucha|lenguado|pez espada|marisco|pescadilla/i.test(n)) return 'Marisco';
   if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|boniato|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre|puerro|perejil|albahaca|cilantro|col|repollo|guisante|haba|judía verde|germinado|berro|endibia/i.test(n)) return 'Verduras';
   if (/manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya|granada|mandarina|frambuesa|mora|parchita|maracuyá|carambola|lichi|caqui|nispero|dátil|higo chumbo/i.test(n)) return 'Frutas';
   if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano|kefir|ricotta|cottage|gouda|cheddar/i.test(n)) return 'Lácteos';
