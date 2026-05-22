@@ -2,27 +2,33 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
 
-const categories = ['Proteínas', 'Frutas y Verduras', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Otros'];
+const categories = ['Proteínas', 'Verduras', 'Frutas', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Congelados', 'Bebidas', 'Otros'];
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
 
 const categoryIcons = {
   'Proteínas': 'lunch_dining',
-  'Frutas y Verduras': 'eco',
+  'Verduras': 'eco',
+  'Frutas': 'nutrition',
   'Lácteos': 'water_drop',
   'Hidratos': 'bakery_dining',
   'Conservas': 'inventory_2',
   'Condimentos': 'spa',
+  'Congelados': 'ac_unit',
+  'Bebidas': 'local_cafe',
   'Otros': 'inventory_2',
 };
 
 const autoCategorize = (name) => {
   const n = name.toLowerCase().trim();
-  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón/i.test(n)) return 'Proteínas';
-  if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre|manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya|granada|mandarina|frambuesa|mor/i.test(n)) return 'Frutas y Verduras';
-  if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano|kefir|ricotta/i.test(n)) return 'Lácteos';
-  if (/arroz|pasta|macarrón|espagueti|pan|bollo|barra|baguette|molde|integral|tostada|pancake|crepe|chapata|centeno|harina|avena|legumbre|lenteja|garbanzo|alubia|judía|garrofón|quinoa|cuscús|trigo|maíz|tortilla|taco|galleta|bizcocho|magdalena|cereal/i.test(n)) return 'Hidratos';
-  if (/lata|conserva|aceituna|encurtido|maíz dulce|tomate frito|tomate triturado|pimiento asado|alcachofa en conserva|berberecho|mejillón en conserva|caldo|sopa/i.test(n)) return 'Conservas';
-  if (/aceite|sal|pimienta|orégano|canela|especia|laurel|tomillo|romero|curry|pimentón|comino|nuez moscada|clavo|vinagre|mostaza|azafrán|albahaca|cilantro|perejil|eneldo|condimento/i.test(n)) return 'Condimentos';
+  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón|huevo|chorizo|mortadela|salchichón/i.test(n)) return 'Proteínas';
+  if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|boniato|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre|puerro|perejil|albahaca|cilantro|col|repollo|guisante|haba|judía verde|germinado|berro|endibia/i.test(n)) return 'Verduras';
+  if (/manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya|granada|mandarina|frambuesa|mora|parchita|maracuyá|carambola|lichi|caqui|nispero|dátil|higo chumbo/i.test(n)) return 'Frutas';
+  if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano|kefir|ricotta|cottage|gouda|cheddar/i.test(n)) return 'Lácteos';
+  if (/arroz|pasta|macarrón|espagueti|pan|bollo|barra|baguette|molde|integral|tostada|pancake|crepe|chapata|centeno|harina|avena|legumbre|lenteja|garbanzo|alubia|judía|garrofón|quinoa|cuscús|trigo|maíz|tortilla|taco|galleta|bizcocho|magdalena|cereal|mijo|bulgur|sémola|fideo|tallarín|lasaña|canelón|ravioli|gnocchi/i.test(n)) return 'Hidratos';
+  if (/lata|conserva|aceituna|encurtido|maíz dulce|tomate frito|tomate triturado|pimiento asado|alcachofa en conserva|berberecho|mejillón en conserva|caldo|sopa|pate|anchoa en lata|espárrago en conserva/i.test(n)) return 'Conservas';
+  if (/aceite|sal|pimienta|orégano|canela|especia|laurel|tomillo|romero|curry|pimentón|comino|nuez moscada|clavo|vinagre|mostaza|azafrán|eneldo|condimento|salsa|kétchup|mayonesa|mostaza|miel|sirope|azúcar|edulcorante|levadura|bicarbonato/i.test(n)) return 'Condimentos';
+  if (/congelado|helado|hielo|pizza congelada|verduras congeladas|pescado congelado|patatas congeladas/i.test(n)) return 'Congelados';
+  if (/agua|refresco|zumo|vino|cerveza|café|té|infusión|leche vegetal|bebida|cola|gaseosa|sidra|cava|ron|whisky|vodka|licor/i.test(n)) return 'Bebidas';
   return 'Otros';
 };
 
