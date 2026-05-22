@@ -216,7 +216,7 @@ export default function MealsPage() {
         )}
 
         {steps.length > 0 && (
-          <div className="neo-card !bg-primary-600 !text-white !border-primary-800 mb-3">
+          <div className="neo-card !bg-primary-600 !text-white !border-primary-800 mb-3 mt-4">
             <span className="text-xs font-bold uppercase">Paso {cookingStep + 1} de {steps.length}</span>
             <p className="text-lg font-extrabold mt-1">{steps[cookingStep]}</p>
           </div>
