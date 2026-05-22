@@ -152,9 +152,7 @@ function preprocessImage(canvas) {
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
     const gray = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-    const light = gray > 180 ? 255 : gray;
-    const dark = light < 40 ? 0 : light;
-    data[i] = data[i + 1] = data[i + 2] = dark;
+    data[i] = data[i + 1] = data[i + 2] = gray;
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas;
