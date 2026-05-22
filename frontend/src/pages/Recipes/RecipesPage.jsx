@@ -5,6 +5,42 @@ import RECIPE_DB from '../../data/recipeDb';
 
 const recipesWithIds = RECIPE_DB.map((r, i) => ({ ...r, id: `r${i}` }));
 
+const ingredientCategories = {
+  'Proteínas': [
+    'Pollo', 'Ternera', 'Cerdo', 'Carne picada', 'Pavo', 'Jamón', 'Salchichas',
+    'Salmón', 'Pescado blanco', 'Merluza', 'Atún en lata', 'Sardinas', 'Gambas',
+    'Huevos',
+  ],
+  'Frutas y Verduras': [
+    'Tomate', 'Cebolla', 'Ajo', 'Pimiento', 'Zanahoria', 'Calabacín', 'Berenjena', 'Calabaza',
+    'Lechuga', 'Espinacas', 'Col', 'Judías verdes', 'Champiñones', 'Pepino', 'Brócoli',
+    'Patatas', 'Aguacate',
+    'Plátano', 'Manzana', 'Fresas', 'Limón', 'Naranja', 'Uvas', 'Pera', 'Melón', 'Sandía', 'Kiwi',
+  ],
+  'Lácteos': [
+    'Leche', 'Yogur natural', 'Queso', 'Queso cheddar', 'Queso parmesano', 'Queso mozzarella',
+    'Nata', 'Mantequilla', 'Crema agria', 'Requesón',
+  ],
+  'Hidratos': [
+    'Arroz', 'Pasta', 'Macarrones', 'Espaguetis', 'Pan', 'Pan de hamburguesa', 'Pan rallado',
+    'Tortillas de trigo', 'Tortillas de maíz', 'Harina', 'Avena', 'Granola',
+    'Lentejas', 'Garbanzos', 'Alubias', 'Garrofón', 'Quinoa', 'Cuscús',
+    'Maíz dulce',
+  ],
+  'Conservas': [
+    'Tomate triturado', 'Tomate frito', 'Caldo de pollo', 'Caldo de verduras',
+    'Aceitunas', 'Pimientos asados', 'Alcachofas en conserva',
+  ],
+  'Condimentos': [
+    'Aceite de oliva', 'Sal', 'Pimienta', 'Vinagre', 'Mostaza', 'Ketchup', 'Mayonesa', 'Miel',
+    'Perejil', 'Albahaca', 'Cilantro', 'Eneldo', 'Azafrán', 'Comino', 'Pimentón', 'Pimentón picante',
+    'Orégano', 'Nuez moscada', 'Jengibre', 'Canela', 'Laurel', 'Tomillo', 'Romero', 'Curry',
+    'Semillas de sésamo', 'Frutos secos', 'Mantequilla de cacahuete', 'Cacao',
+  ],
+};
+
+const PANTRY_INGREDIENTS = Object.values(ingredientCategories).flat();
+
 const categories = ['Todas', 'desayuno', 'almuerzo', 'comida', 'cena'];
 const difficulties = ['Todas', 'Fácil', 'Media', 'Difícil'];
 
