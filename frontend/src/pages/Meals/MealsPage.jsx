@@ -162,7 +162,9 @@ export default function MealsPage() {
 
   const parseInstructions = (text) => text?.split('\n').filter(l => l.trim()) || [];
 
-  const dayMeals = meals.filter(m => m.day === selectedDay);
+  const dayMeals = selectedDay === 'todas'
+    ? meals
+    : meals.filter(m => !m.day || m.day === selectedDay);
 
   if (selectedMeal) {
     const steps = parseInstructions(selectedMeal.instructions);
@@ -241,6 +243,12 @@ export default function MealsPage() {
       </div>
 
       <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+        <button key="todas"
+          onClick={() => setSelectedDay('todas')}
+          className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === 'todas' ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
+        >
+          Todas
+        </button>
         {dayKeys.map(key => (
           <button key={key}
             onClick={() => setSelectedDay(key)}
@@ -254,7 +262,7 @@ export default function MealsPage() {
       {dayMeals.length === 0 && (
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-gray-300">restaurant_menu</span>
-          <p className="text-gray-400 font-bold mt-2">{t('meals.noMealsForDay')} {t(`meals.days.${selectedDay}`)}</p>
+          <p className="text-gray-400 font-bold mt-2">{t('meals.noMealsForDay')} {selectedDay === 'todas' ? 'seleccionado' : t(`meals.days.${selectedDay}`)}</p>
           <button onClick={() => { setShowForm(true); setForm({ ...form, day: selectedDay }); generateSuggestion(); }} className="neo-btn-primary !py-2 !px-4 !text-sm mt-3">
             Sugerir comida
           </button>
