@@ -6,7 +6,22 @@ import { createWorker } from 'tesseract.js';
 import RECIPE_DB from '../../data/recipeDb';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
-const categoryOptions = ['proteina', 'carbohidrato', 'verdura', 'fruta', 'lacteo', 'grasa', 'otro'];
+const categoryOptions = ['Carne', 'Marisco', 'Verduras', 'Frutas', 'Lácteos', 'Hidratos', 'Conservas', 'Condimentos', 'Congelados', 'Bebidas', 'Otros'];
+
+const autoCategorize = (name) => {
+  const n = name.toLowerCase().trim();
+  if (/pollo|ternera|cerdo|carne|filete|chuleta|solomillo|lomo|cordero|hamburguesa|salchicha|tocino|jamón|pavo|conejo|chorizo|mortadela|salchichón|butifarra|fuet|longaniza|secreto|presa|costilla|entrecot|rabo|higado|riñón|seso/i.test(n)) return 'Carne';
+  if (/salmón|merluza|atún|bacalao|pescado|gamba|langostino|lubina|dorada|sardina|anchoa|pulpo|calamar|sepia|boquerón|mejillón|almeja|berberecho|vieira|cigala|centollo|nécora|percebe|navaja|bacaladilla|caballa|rape|rodaballo|besugo|trucha|lenguado|pez espada|marisco|pescadilla/i.test(n)) return 'Marisco';
+  if (/lechuga|tomate|cebolla|ajo|pimiento|espinaca|brócoli|coliflor|zanahoria|calabacín|berenjena|patata|papa|batata|boniato|verdura|acelga|apio|alcachofa|espárrago|champiñón|seta|hortaliza|rúcula|canónigo|remolacha|nabo|rábano|jengibre|puerro|perejil|albahaca|cilantro|col|repollo|guisante|haba|judía verde|germinado|berro|endibia/i.test(n)) return 'Verduras';
+  if (/manzana|plátano|naranja|limón|fresa|uva|pera|melón|sandía|kiwi|mango|piña|fruta|arándano|cereza|pomelo|higo|ciruela|albaricoque|melocotón|aguacate|coco|papaya|granada|mandarina|frambuesa|mora/i.test(n)) return 'Frutas';
+  if (/leche|queso|yogur|mantequilla|nata|crema|lácteo|requesón|cuajada|quesito|mozzarella|parmesano|kefir|ricotta|cottage|gouda|cheddar/i.test(n)) return 'Lácteos';
+  if (/arroz|pasta|macarrón|espagueti|pan|bollo|barra|baguette|molde|integral|tostada|harina|avena|legumbre|lenteja|garbanzo|alubia|judía|garrofón|quinoa|cuscús|trigo|maíz|galleta|bizcocho|magdalena|cereal|mijo|bulgur|sémola|fideo|tallarín|lasaña|canelón|ravioli|gnocchi/i.test(n)) return 'Hidratos';
+  if (/lata|conserva|aceituna|encurtido|maíz dulce|tomate frito|tomate triturado|pimiento asado|caldo|sopa|pate|anchoa en lata/i.test(n)) return 'Conservas';
+  if (/aceite|sal|pimienta|orégano|canela|especia|laurel|tomillo|romero|curry|pimentón|comino|nuez moscada|clavo|vinagre|mostaza|azafrán|eneldo|salsa|kétchup|mayonesa|miel|sirope|azúcar|edulcorante|levadura|bicarbonato/i.test(n)) return 'Condimentos';
+  if (/congelado|helado|hielo|pizza congelada/i.test(n)) return 'Congelados';
+  if (/agua|refresco|zumo|vino|cerveza|café|té|infusión|leche vegetal|bebida|cola|gaseosa|sidra|ron|whisky|vodka|licor/i.test(n)) return 'Bebidas';
+  return 'Otros';
+};
 
 const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -275,7 +290,7 @@ export default function ScannerPage() {
         return;
       }
 
-      setParsedItems(uniq.map(i => ({ ...i, category: 'otro' })));
+      setParsedItems(uniq.map(i => ({ ...i, category: autoCategorize(i.name) })));
       setStep('review');
       findRecommendations(uniq);
     } catch (e) {
@@ -362,7 +377,7 @@ export default function ScannerPage() {
   };
 
   const addItem = () => {
-    setParsedItems(prev => [...prev, { name: '', quantity: '1', unit: 'unidad', category: 'otro' }]);
+    setParsedItems(prev => [...prev, { name: '', quantity: '1', unit: 'unidad', category: 'Otros' }]);
   };
 
   useEffect(() => () => { cameraStreamRef.current?.getTracks().forEach(t => t.stop()); }, []);
@@ -542,7 +557,7 @@ export default function ScannerPage() {
                       </select>
                       <select
                         className="text-xs bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 px-1 py-0.5 dark:text-white"
-                        value={item.category || 'otro'}
+                        value={item.category || 'Otros'}
                         onChange={e => updateItem(i, 'category', e.target.value)}
                       >
                         {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
