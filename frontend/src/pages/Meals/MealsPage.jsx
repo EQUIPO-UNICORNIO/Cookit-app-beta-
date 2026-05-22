@@ -286,23 +286,25 @@ export default function MealsPage() {
 
       <div className="space-y-3">
         {dayMeals.map(meal => (
-          <div key={meal.id} className="neo-card relative cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedMeal(meal)}>
-            {meal.day && (
-              <span className={`absolute top-2 right-2 text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border-2
-                ${meal.meal_type === 'desayuno' ? 'bg-amber-100 text-amber-800 border-amber-400' : ''}
-                ${meal.meal_type === 'almuerzo' ? 'bg-green-100 text-green-800 border-green-400' : ''}
-                ${meal.meal_type === 'comida' ? 'bg-blue-100 text-blue-800 border-blue-400' : ''}
-                ${meal.meal_type === 'merienda' ? 'bg-purple-100 text-purple-800 border-purple-400' : ''}
-                ${meal.meal_type === 'cena' ? 'bg-indigo-100 text-indigo-800 border-indigo-400' : ''}
-                ${!['desayuno','almuerzo','comida','merienda','cena'].includes(meal.meal_type) ? 'bg-gray-800 text-white border-black' : ''}`}>
-                {DAY_NAMES[meal.day] || meal.day}
-              </span>
-            )}
+          <div key={meal.id} className="neo-card cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedMeal(meal)}>
             <div className="flex gap-3 items-start">
               <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1">
                 <span className="text-xs font-bold text-primary-600 uppercase bg-primary-50 px-2 py-0.5 rounded-lg border border-primary-200">
                   {meal.meal_type}
                 </span>
+                {meal.day && (
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border-2
+                    ${meal.meal_type === 'desayuno' ? 'bg-amber-100 text-amber-800 border-amber-400' : ''}
+                    ${meal.meal_type === 'almuerzo' ? 'bg-green-100 text-green-800 border-green-400' : ''}
+                    ${meal.meal_type === 'comida' ? 'bg-blue-100 text-blue-800 border-blue-400' : ''}
+                    ${meal.meal_type === 'merienda' ? 'bg-purple-100 text-purple-800 border-purple-400' : ''}
+                    ${meal.meal_type === 'cena' ? 'bg-indigo-100 text-indigo-800 border-indigo-400' : ''}
+                    ${!['desayuno','almuerzo','comida','merienda','cena'].includes(meal.meal_type) ? 'bg-gray-800 text-white border-black' : ''}`}>
+                    {DAY_NAMES[meal.day] || meal.day}
+                  </span>
+                )}
+                </div>
                 <h3 className="font-extrabold text-base mt-1 truncate">{meal.name}</h3>
                 {meal.recipe && <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">Receta: {meal.recipe}</p>}
                 {meal.ingredients && meal.ingredients.length > 0 && (
