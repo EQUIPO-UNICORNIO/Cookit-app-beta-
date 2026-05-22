@@ -30,10 +30,12 @@ const IGNORE_WORDS = new Set([
   'dto', 'bono', 'cupon', 'puntos', 'saldo', 'disponible', 'consumicion', 'camara',
   'carnet', 'telf', 'movil', 'email', 'direccion', 'poblacion', 'provincia', 'codigo postal',
   'recargo', 'gastos', 'envio', 'portes', 'atendido', 'bolsa', 'bolsas', 'cuenta',
-  'ambiente', 'medio', 'redondeo',
+  'ambiente', 'medio', 'redondeo', 'eur', 'pvp', 'num', 'artic', 'nulo', 'despacho', 'tel',
 ]);
 
 const IGNORE_STARTS = ['avda', 'calle', 'plaza', 'ctra', 'camino', 'paseo', 'ronda', 'carretera', 'c/', 'travesia'];
+
+const TICKET_METADATA_RE = /p\.v\.p|atendido\s+por|num\.?\s*ticket|artic\.?\s*vendidos|artic\.?\s*por|unidades\s*vendidas|balance\s*venta|ventas\s*del|documento|justificante|original|duplicado|ticket\s*num/i;
 
 function isProductLine(line) {
   const clean = line.replace(/\s+/g, ' ').trim();
@@ -119,6 +121,7 @@ function fallbackParseLines(text) {
   const items = [];
   const seen = new Set();
   for (const line of lines) {
+    if (TICKET_METADATA_RE.test(line)) continue;
     let clean = line.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s]/g, '').trim();
     if (!clean || clean.length < 5) continue;
     const lower = normalize(clean);
@@ -240,6 +243,7 @@ export default function ScannerPage() {
       let items = [];
       const seenNames = new Set();
       for (const line of lines) {
+        if (TICKET_METADATA_RE.test(line)) continue;
         const product = parseLineToProduct(line);
         if (product) {
           const pn = normalize(product.name);
@@ -272,6 +276,10 @@ export default function ScannerPage() {
         setProcessing(false);
         return;
       }
+
+      items = items.filter((item, index, self) =>
+        index === self.findIndex(t => normalize(t.name) === normalize(item.name))
+      );
 
       setParsedItems(items.map(i => ({ ...i, category: 'otro' })));
       setStep('review');
