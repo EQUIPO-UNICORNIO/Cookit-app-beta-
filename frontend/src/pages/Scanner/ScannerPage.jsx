@@ -37,6 +37,17 @@ const IGNORE_STARTS = ['avda', 'calle', 'plaza', 'ctra', 'camino', 'paseo', 'ron
 
 const TICKET_METADATA_RE = /p\.v\.p|atendido\s+por|num\.?\s*ticket|artic\.?\s*vendidos|artic\.?\s*por|unidades\s*vendidas|balance\s*venta|ventas\s*del|documento|justificante|original|duplicado|ticket\s*num/i;
 
+function getSignificantWords(name) {
+  return normalize(name).split(/\s+/).filter(w => w.length > 2);
+}
+function isDuplicateProduct(name1, name2) {
+  const w1 = getSignificantWords(name1);
+  const w2 = getSignificantWords(name2);
+  if (!w1.length || !w2.length) return normalize(name1) === normalize(name2);
+  const overlap = w1.filter(w => w2.includes(w)).length;
+  return overlap / Math.min(w1.length, w2.length) >= 0.5;
+}
+
 function isProductLine(line) {
   const clean = line.replace(/\s+/g, ' ').trim();
   if (clean.length < 5) return false;
@@ -240,50 +251,42 @@ export default function ScannerPage() {
       }
 
       const lines = text.split('\n').filter(l => l.trim());
-      let items = [];
-      const seenNames = new Set();
+      const allProducts = [];
+      const uniq = [];
+
+      const addIfNotDup = (product) => {
+        const dup = uniq.some(p => isDuplicateProduct(p.name, product.name));
+        if (!dup) uniq.push(product);
+        return !dup;
+      };
+
       for (const line of lines) {
         if (TICKET_METADATA_RE.test(line)) continue;
         const product = parseLineToProduct(line);
-        if (product) {
-          const pn = normalize(product.name);
-          if (!seenNames.has(pn)) {
-            seenNames.add(pn);
-            items.push(product);
-          }
-        }
-        if (items.length >= 50) break;
+        if (product) allProducts.push(product);
       }
 
       const fallbackItems = fallbackParseLines(text);
       for (const fb of fallbackItems) {
         fb.name = cleanProductName(fb.name) || fb.name;
-        const fn = normalize(fb.name);
-        const dup = seenNames.has(fn) || items.some(i => {
-          const iname = normalize(i.name);
-          return iname.includes(fn) || fn.includes(iname);
-        });
-        if (!dup) {
-          seenNames.add(fn);
-          items.push(fb);
-        }
-        if (items.length >= 50) break;
+        allProducts.push(fb);
       }
 
-      if (items.length === 0) {
+      for (const p of allProducts) {
+        addIfNotDup(p);
+        if (uniq.length >= 50) break;
+      }
+
+      if (uniq.length === 0) {
         setError('No se detectaron productos en el ticket. Intenta con una foto mas clara.');
         setStep('initial');
         setProcessing(false);
         return;
       }
 
-      items = items.filter((item, index, self) =>
-        index === self.findIndex(t => normalize(t.name) === normalize(item.name))
-      );
-
-      setParsedItems(items.map(i => ({ ...i, category: 'otro' })));
+      setParsedItems(uniq.map(i => ({ ...i, category: 'otro' })));
       setStep('review');
-      findRecommendations(items);
+      findRecommendations(uniq);
     } catch (e) {
       setError('Error al procesar la imagen: ' + e.message);
       setStep('initial');
