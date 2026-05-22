@@ -299,12 +299,12 @@ export default function MealsPage() {
                   </div>
                 )}
               </div>
-              {meal.photo && (
-                <div className="flex-shrink-0">
-                  <img src={meal.photo} alt={meal.name} className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
-                </div>
-              )}
             </div>
+            {meal.photo && (
+              <div className="mt-2">
+                <img src={meal.photo} alt={meal.name} className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+              </div>
+            )}
             <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
               <button onClick={(e) => { e.stopPropagation(); setEditing(meal.id); setForm({ name: meal.name, day: meal.day, meal_type: meal.meal_type, recipe: meal.recipe, ingredients: (meal.ingredients || []).join(', '), instructions: meal.instructions || '', photo: meal.photo }); setShowForm(true); }} className="text-xs font-bold neo-btn !py-1 !px-3 flex-1 !border-gray-300 text-gray-600">
                 <span className="material-symbols-outlined text-sm align-text-bottom">edit</span> Editar
