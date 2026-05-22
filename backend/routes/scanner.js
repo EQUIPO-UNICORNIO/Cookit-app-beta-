@@ -1,5 +1,4 @@
 const express = require('express');
-const Tesseract = require('tesseract.js');
 const supabase = require('../lib/supabase');
 const { create, updateById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
@@ -11,16 +10,45 @@ router.post('/process-ticket', async (req, res) => {
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'Imagen requerida' });
 
-    const buffer = Buffer.from(image, 'base64');
-    const { data: { text } } = await Tesseract.recognize(buffer, 'spa+eng', {
-      langPath: process.env.TESSDATA_PATH || undefined,
-    });
+    const geminiKey = process.env.GEMINI_KEY;
+    let items = [];
 
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const ignored = /total|iva|subtotal|efectivo|cambio|tarjeta|cuenta|gracias|ticket|factura|nif|cif|telefono|euro|€|\d+[,.]\d{2}/i;
-    const items = lines.filter(l => !ignored.test(l) && l.length > 3 && /[a-záéíóúñ]/i.test(l))
-      .map(name => ({ name: name.replace(/^\d+\s*/, '').trim(), quantity: '1', unit: 'unidad', category: 'otro' }))
-      .slice(0, 40);
+    if (geminiKey) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: `Eres un asistente que extrae productos de tickets de supermercado.
+Extrae SOLO los productos comprados. 
+Ignora completamente: totales, subtotales, IVA, direcciones, fechas, TPV, resto a pagar, numeros de ticket, datos del establecimiento.
+Responde UNICAMENTE con JSON valido, sin texto extra:
+{"productos":[{"nombre":"NOMBRE","cantidad":"1","unidad":"unidad"}]}` },
+                  { inline_data: { mime_type: 'image/jpeg', data: image } }
+                ]
+              }]
+            })
+          }
+        );
+
+        if (response.ok) {
+          const json = await response.json();
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const clean = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+          const match = clean.match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            items = (parsed.productos || []).filter(p => p.nombre?.trim());
+          }
+        }
+      } catch (e) {
+        // Gemini fallo, continuar con fallback
+      }
+    }
 
     res.json({ items });
   } catch (e) {
