@@ -54,6 +54,8 @@ export default function MealsPage() {
   const [toast, setToast] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [showVideo, setShowVideo] = useState(null);
+  const [loadingVideo, setLoadingVideo] = useState(null);
+  const videoIdCache = useRef({});
 
   useEffect(() => { loadMeals(); }, []);
 
@@ -95,6 +97,34 @@ export default function MealsPage() {
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const openVideo = async (meal) => {
+    if (loadingVideo) return;
+    setLoadingVideo(meal.id);
+
+    let embedUrl = meal.videoUrl;
+
+    if (!embedUrl || embedUrl.includes('listType=search')) {
+      const cacheKey = meal.id;
+      if (videoIdCache.current[cacheKey]) {
+        embedUrl = `https://www.youtube.com/embed/${videoIdCache.current[cacheKey]}`;
+      } else {
+        try {
+          const res = await api.searchYoutube('receta ' + meal.name);
+          if (res.videoId) {
+            videoIdCache.current[cacheKey] = res.videoId;
+            embedUrl = `https://www.youtube.com/embed/${res.videoId}`;
+          }
+        } catch (e) {
+          console.error('YouTube search error', e);
+        }
+      }
+    }
+
+    setLoadingVideo(null);
+    if (embedUrl && !embedUrl.includes('listType=search')) setShowVideo(embedUrl);
+    else showToast('No se encontró vídeo');
   };
 
   const handleSubmit = async (e) => {
@@ -204,7 +234,7 @@ export default function MealsPage() {
           <h2 className="text-xl font-extrabold mt-2">{selectedMeal.name}</h2>
           {selectedMeal.day && <p className="text-xs text-gray-400 mt-0.5">Día: {DAY_NAMES[selectedMeal.day] || selectedMeal.day}</p>}
 
-          <button onClick={() => setShowVideo(selectedMeal.videoUrl || `https://www.youtube.com/embed?listType=search&hl=es&query=receta+${encodeURIComponent(selectedMeal.name)}`)} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 w-full mt-3">
+          <button onClick={() => openVideo(selectedMeal)} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 w-full mt-3" disabled={loadingVideo === selectedMeal.id}>
             <span className="material-symbols-outlined text-sm align-text-bottom">play_circle</span> Ver vídeo
           </button>
           {selectedMeal.ingredients?.length > 0 && (
@@ -358,7 +388,7 @@ export default function MealsPage() {
               )}
             </div>
             <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
-              <button onClick={(e) => { e.stopPropagation(); setShowVideo(meal.videoUrl || `https://www.youtube.com/embed?listType=search&hl=es&query=receta+${encodeURIComponent(meal.name)}`); }} className="text-xs font-bold neo-btn !py-1 !px-3 !bg-red-50 !text-red-600 !border-red-300">
+              <button onClick={(e) => { e.stopPropagation(); openVideo(meal); }} className="text-xs font-bold neo-btn !py-1 !px-3 !bg-red-50 !text-red-600 !border-red-300" disabled={loadingVideo === meal.id}>
                 <span className="material-symbols-outlined text-sm align-text-bottom">play_circle</span>
               </button>
               <button onClick={(e) => { e.stopPropagation(); setEditing(meal.id); setForm({ name: meal.name, day: meal.day, meal_type: meal.meal_type, recipe: meal.recipe, ingredients: (meal.ingredients || []).join(', '), instructions: meal.instructions || '', photo: meal.photo, videoUrl: meal.videoUrl || '' }); setShowForm(true); }} className="text-xs font-bold neo-btn !py-1 !px-3 flex-1 !border-gray-300 text-gray-600">
