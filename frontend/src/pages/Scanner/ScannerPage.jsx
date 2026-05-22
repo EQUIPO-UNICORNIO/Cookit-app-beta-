@@ -44,14 +44,28 @@ export default function ScannerPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const resizeAndProcess = (canvas) => {
+    const MAX = 1200;
+    let { width, height } = canvas;
+    if (width > MAX || height > MAX) {
+      const scale = MAX / Math.max(width, height);
+      const c = document.createElement('canvas');
+      c.width = Math.round(width * scale);
+      c.height = Math.round(height * scale);
+      c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+      canvas = c;
+    }
+    processImage(canvas);
+  };
+
   const processImage = async (canvas) => {
     setProcessing(true);
     setError('');
-    setOcrProgress(t('scanner.processingOCR') || 'Analizando ticket...');
-    const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+    setOcrProgress('Leyendo texto del ticket...');
+    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
     try {
-      const result = await api.processTicket(base64, 'image/jpeg');
+      const result = await api.processTicket(base64);
       const items = (result.items || []).filter(i => i.name?.trim());
 
       if (items.length === 0) {
@@ -66,7 +80,7 @@ export default function ScannerPage() {
       setStep('review');
       findRecommendations(items);
     } catch (e) {
-      setError(t('scanner.errorProcessImage') + e.message);
+      setError('Error al procesar: ' + e.message);
       setStep('initial');
     }
     setProcessing(false);
@@ -85,7 +99,7 @@ export default function ScannerPage() {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
       URL.revokeObjectURL(img.src);
-      processImage(canvas);
+      resizeAndProcess(canvas);
     };
     img.onerror = () => setError(t('scanner.errorLoadImage'));
     e.target.value = '';
@@ -215,7 +229,7 @@ export default function ScannerPage() {
     cameraStreamRef.current = null;
     setCameraActive(false);
     setFlashOn(false);
-    processImage(canvas);
+    resizeAndProcess(canvas);
   };
 
   return (

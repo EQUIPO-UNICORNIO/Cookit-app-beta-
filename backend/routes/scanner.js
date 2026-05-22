@@ -5,11 +5,10 @@ const { create, updateById } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
-router.use(authMiddleware);
 
 router.post('/process-ticket', async (req, res) => {
   try {
-    const { image, media_type } = req.body;
+    const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'Imagen requerida' });
 
     const buffer = Buffer.from(image, 'base64');
@@ -18,10 +17,10 @@ router.post('/process-ticket', async (req, res) => {
     });
 
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const ignored = /total|iva|efectivo|cambio|tarjeta|cuenta|gracias|ticket|factura|euro|€|\d+[,.]\d{2}/i;
-    const items = lines.filter(l => !ignored.test(l) && l.length > 2 && /[a-záéíóúñ]/i.test(l))
-      .map(name => ({ name, quantity: 1, unit: 'unidad', category: 'otro' }))
-      .slice(0, 30);
+    const ignored = /total|iva|subtotal|efectivo|cambio|tarjeta|cuenta|gracias|ticket|factura|nif|cif|telefono|euro|€|\d+[,.]\d{2}/i;
+    const items = lines.filter(l => !ignored.test(l) && l.length > 3 && /[a-záéíóúñ]/i.test(l))
+      .map(name => ({ name: name.replace(/^\d+\s*/, '').trim(), quantity: '1', unit: 'unidad', category: 'otro' }))
+      .slice(0, 40);
 
     res.json({ items });
   } catch (e) {
