@@ -80,6 +80,33 @@ router.put('/update', authMiddleware, async (req, res) => {
   }
 });
 
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Ambas contraseñas requeridas' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    const user = await getOne('users', { id: req.userId });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const valid = await bcrypt.compare(oldPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await updateById('users', req.userId, { password: hashed });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/account', authMiddleware, async (req, res) => {
+  try {
+    const supabaseClient = require('../lib/supabase');
+    await supabaseClient.from('users').delete().eq('id', req.userId);
+    res.json({ success: true, message: 'Cuenta eliminada' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/sync-password', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;

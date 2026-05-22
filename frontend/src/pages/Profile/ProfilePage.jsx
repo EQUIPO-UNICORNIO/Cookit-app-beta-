@@ -30,6 +30,10 @@ export default function ProfilePage() {
   const [builtIn, setBuiltIn] = useState(currentAvatar);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const saveAvatar = async (data) => {
     try {
@@ -70,6 +74,26 @@ export default function ProfilePage() {
       await refreshUser();
       setEditingName(false);
     } catch (e) { console.error(e); }
+  };
+
+  const savePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 6) { alert('La contraseña debe tener al menos 6 caracteres'); return; }
+    try {
+      await api.changePassword(oldPassword, newPassword);
+      setShowPasswordForm(false);
+      setOldPassword('');
+      setNewPassword('');
+      alert('Contraseña cambiada correctamente');
+    } catch (e) { alert(e.message); }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await api.deleteAccount();
+      logout();
+      navigate('/access');
+    } catch (e) { alert(e.message); }
   };
 
   return (
@@ -163,6 +187,18 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        <div className="neo-card !p-4 cursor-pointer" onClick={() => setShowPasswordForm(true)}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center border-2 border-black">
+              <span className="material-symbols-outlined text-primary-600">lock</span>
+            </div>
+            <div>
+              <p className="font-bold text-sm">Cambiar contraseña</p>
+              <p className="text-xs text-gray-500">Actualiza tu contraseña</p>
+            </div>
+          </div>
+        </div>
+
         <div className="neo-card !p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center border-2 border-black">
@@ -184,6 +220,16 @@ export default function ProfilePage() {
             <p className="text-xs text-gray-500">{user?.email || ''}</p>
           </div>
         </button>
+
+        <button onClick={() => setShowDeleteConfirm(true)} className="neo-card !p-4 w-full text-left flex items-center gap-3 !border-red-400 hover:bg-red-50">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center border-2 border-red-400">
+            <span className="material-symbols-outlined text-red-600">delete_forever</span>
+          </div>
+          <div>
+            <p className="font-bold text-sm text-red-600">Eliminar cuenta</p>
+            <p className="text-xs text-gray-500">Borrar todos tus datos</p>
+          </div>
+        </button>
       </div>
 
       <div className="text-center mt-6 space-x-3">
@@ -191,6 +237,35 @@ export default function ProfilePage() {
         <span className="text-xs text-gray-300">·</span>
         <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{t('profile.termsOfService')}</a>
       </div>
+
+      {showPasswordForm && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onClick={() => setShowPasswordForm(false)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-14 border-t-2 border-black" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-extrabold mb-4">Cambiar contraseña</h2>
+            <form onSubmit={savePassword} className="space-y-3">
+              <input className="neo-input" type="password" placeholder="Contraseña actual" value={oldPassword} onChange={e => setOldPassword(e.target.value)} required />
+              <input className="neo-input" type="password" placeholder="Nueva contraseña (mín. 6 caracteres)" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+              <div className="flex gap-2">
+                <button type="submit" className="neo-btn-primary flex-1">Guardar</button>
+                <button type="button" onClick={() => setShowPasswordForm(false)} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl border-2 border-black" onClick={e => e.stopPropagation()}>
+            <h3 className="font-extrabold text-lg text-center mb-2">¿Eliminar cuenta?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">Todos tus datos se borrarán permanentemente. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
+              <button onClick={handleDeleteAccount} className="neo-btn !bg-red-500 !text-white flex-1">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

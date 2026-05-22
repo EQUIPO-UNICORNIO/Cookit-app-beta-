@@ -52,6 +52,7 @@ export default function MealsPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [fullPhoto, setFullPhoto] = useState(null);
   const [toast, setToast] = useState(null);
+  const [viewMode, setViewMode] = useState('list');
 
   useEffect(() => { loadMeals(); }, []);
 
@@ -257,22 +258,53 @@ export default function MealsPage() {
         </button>
       </div>
 
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        <button key="todas"
-          onClick={() => setSelectedDay('todas')}
-          className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === 'todas' ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
-        >
-          Todas
-        </button>
-        {dayKeys.map(key => (
-          <button key={key}
-            onClick={() => setSelectedDay(key)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === key ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1 flex gap-1 overflow-x-auto pb-1">
+          <button key="todas"
+            onClick={() => setSelectedDay('todas')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === 'todas' ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
           >
-            {t(`meals.days.${key}`)}
+            Todas
           </button>
-        ))}
+          {dayKeys.map(key => (
+            <button key={key}
+              onClick={() => setSelectedDay(key)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDay === key ? 'bg-primary-600 text-white neo-shadow-primary' : 'bg-white dark:bg-gray-300 border-2 border-black dark:text-black'}`}
+            >
+              {t(`meals.days.${key}`)}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 border-2 border-black flex-shrink-0">
+          <button onClick={() => setViewMode('list')} className={`px-2 py-1 rounded-lg text-xs font-bold ${viewMode === 'list' ? 'bg-white text-primary-600 border-2 border-black' : 'text-gray-500'}`}>
+            <span className="material-symbols-outlined text-sm align-text-bottom">list</span>
+          </button>
+          <button onClick={() => setViewMode('calendar')} className={`px-2 py-1 rounded-lg text-xs font-bold ${viewMode === 'calendar' ? 'bg-white text-primary-600 border-2 border-black' : 'text-gray-500'}`}>
+            <span className="material-symbols-outlined text-sm align-text-bottom">calendar_view_week</span>
+          </button>
+        </div>
       </div>
+
+      {viewMode === 'calendar' && (
+        <div className="grid grid-cols-7 gap-1 mb-4">
+          {dayKeys.map(day => {
+            const dayMealsFiltered = meals.filter(m => !m.day || m.day === day);
+            return (
+              <div key={day} className="neo-card !p-2 min-h-[100px]">
+                <p className="text-[10px] font-bold text-center uppercase text-gray-500 mb-1">{DAY_NAMES[day].slice(0, 3)}</p>
+                <div className="space-y-1">
+                  {dayMealsFiltered.slice(0, 3).map(m => (
+                    <div key={m.id} className="text-[10px] bg-primary-50 border border-primary-200 rounded-md px-1 py-0.5 truncate font-medium cursor-pointer" onClick={() => setSelectedMeal(m)}>
+                      {m.name}
+                    </div>
+                  ))}
+                  {dayMealsFiltered.length > 3 && <p className="text-[10px] text-gray-400 text-center">+{dayMealsFiltered.length - 3}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {dayMeals.length === 0 && (
         <div className="text-center py-8">

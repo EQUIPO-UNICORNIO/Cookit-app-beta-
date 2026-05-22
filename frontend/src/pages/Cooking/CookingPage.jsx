@@ -7,6 +7,8 @@ export default function CookingPage() {
   const [showForm, setShowForm] = useState(false);
   const [recipeName, setRecipeName] = useState('');
   const [stepsText, setStepsText] = useState('');
+  const [timers, setTimers] = useState({});
+  const [timerInputs, setTimerInputs] = useState({});
 
   useEffect(() => { loadSessions(); }, []);
 
@@ -66,6 +68,24 @@ export default function CookingPage() {
     } catch (e) { alert(e.message); }
   };
 
+  const startTimer = (stepIdx, seconds) => {
+    if (timers[stepIdx]?.interval) return;
+    const endTime = Date.now() + seconds * 1000;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+      setTimers(prev => ({ ...prev, [stepIdx]: { ...prev[stepIdx], remaining } }));
+      if (remaining <= 0) { clearInterval(interval); setTimers(prev => ({ ...prev, [stepIdx]: { ...prev[stepIdx], interval: null, done: true } })); }
+    }, 1000);
+    setTimers(prev => ({ ...prev, [stepIdx]: { seconds, remaining: seconds, interval, done: false } }));
+  };
+
+  const stopTimer = (stepIdx) => {
+    if (timers[stepIdx]?.interval) { clearInterval(timers[stepIdx].interval); }
+    setTimers(prev => ({ ...prev, [stepIdx]: null }));
+  };
+
+  const formatTime = (s) => { const m = Math.floor(s / 60); const sec = s % 60; return `${m}:${sec.toString().padStart(2, '0')}`; };
+
   if (activeSession) {
     const { recipe_name, steps, current_step, completed } = activeSession;
     const progress = steps.length > 0 ? ((current_step + 1) / steps.length) * 100 : 0;
@@ -96,6 +116,35 @@ export default function CookingPage() {
             <div className="neo-card !bg-primary-600 !text-white !border-primary-800">
               <span className="text-xs font-bold uppercase">Paso {current_step + 1}</span>
               <p className="text-lg font-extrabold mt-1">{steps[current_step] || '¡Listo!'}</p>
+            </div>
+            <div className="neo-card">
+              <p className="text-xs font-bold text-gray-500 uppercase mb-2">Temporizador</p>
+              <div className="flex gap-2 items-center">
+                <input
+                  className="neo-input !py-1.5 !text-sm w-20 text-center"
+                  type="number"
+                  placeholder="min"
+                  value={timerInputs[current_step] || ''}
+                  onChange={e => setTimerInputs(prev => ({ ...prev, [current_step]: e.target.value }))}
+                />
+                <span className="text-sm font-bold text-gray-500">min</span>
+                <button
+                  onClick={() => { const v = parseInt(timerInputs[current_step]); if (v > 0) { startTimer(current_step, v * 60); setTimerInputs(prev => ({ ...prev, [current_step]: '' })); } }}
+                  className="neo-btn !py-1.5 !px-3 !text-xs"
+                >
+                  Iniciar
+                </button>
+                {timers[current_step] && (
+                  <span className={`text-lg font-extrabold ml-auto ${timers[current_step].done ? 'text-green-600 animate-pulse' : ''}`}>
+                    {timers[current_step].done ? '¡Tiempo!' : formatTime(timers[current_step].remaining)}
+                  </span>
+                )}
+                {timers[current_step] && !timers[current_step].done && (
+                  <button onClick={() => stopTimer(current_step)} className="text-red-500">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <button onClick={prevStep} disabled={current_step <= 0}

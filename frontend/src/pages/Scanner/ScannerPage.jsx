@@ -107,13 +107,35 @@ function cleanProductName(name) {
   return n || null;
 }
 
+function detectQuantityUnit(name) {
+  const m = name.match(/^(\d+[.,]?\d*)\s*(l|L|ml|kg|g|unidad|unidades|pack|paquete|botella|lata|bolsa|caja|brik|tarro|frasco|tubo|blister|sobre)\s+(.+)$/);
+  if (m) {
+    let q = m[1].replace(',', '.');
+    if (q.endsWith('.')) q = q.slice(0, -1);
+    return { name: m[3].trim(), quantity: q, unit: m[2].toLowerCase() === 'unidades' ? 'unidad' : m[2].toLowerCase() };
+  }
+  const m2 = name.match(/^(.+?)\s+(\d+[.,]?\d*)\s*(l|L|ml|kg|g|unidad|unidades|pack|paquete|botella|lata|bolsa|caja|brik|tarro|frasco|tubo|blister|sobre)$/);
+  if (m2) {
+    let q = m2[2].replace(',', '.');
+    if (q.endsWith('.')) q = q.slice(0, -1);
+    return { name: m2[1].trim(), quantity: q, unit: m2[3].toLowerCase() === 'unidades' ? 'unidad' : m2[3].toLowerCase() };
+  }
+  return null;
+}
+
 function parseLineToProduct(line) {
   if (!isProductLine(line)) return null;
   const clean = line.replace(/\s+/g, ' ').trim();
   const priceMatch = clean.match(/(\d{1,4}[.,]\d{2})\s*$/);
-  let name = clean.substring(0, clean.length - priceMatch[0].length).trim();
-  name = name.replace(/^\d+\s*[xX*]?\s*/, '').trim();
-  name = cleanProductName(name);
+  let namePart = priceMatch ? clean.substring(0, clean.length - priceMatch[0].length).trim() : clean;
+  namePart = namePart.replace(/^\d+\s*[xX*]?\s*/, '').trim();
+  const detected = detectQuantityUnit(namePart);
+  if (detected) {
+    const name = cleanProductName(detected.name);
+    if (!name) return null;
+    return { name, quantity: detected.quantity, unit: detected.unit };
+  }
+  const name = cleanProductName(namePart);
   if (!name) return null;
   return { name, quantity: '1', unit: 'unidad' };
 }

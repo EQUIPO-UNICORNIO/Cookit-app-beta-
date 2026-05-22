@@ -2,8 +2,16 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
 import { CATEGORIES, CATEGORY_ICONS, autoCategorize } from '../../utils/categories';
+import RECIPE_DB from '../../data/recipeDb';
 
 const units = ['unidad', 'kg', 'g', 'L', 'ml', 'paquete', 'lata', 'botella', 'cucharada', 'taza'];
+
+const unitConversions = {
+  'kg': { 'g': 1000 },
+  'g': { 'kg': 0.001 },
+  'L': { 'ml': 1000 },
+  'ml': { 'L': 0.001 },
+};
 
 const LOCAL_KEY = 'cookit_pantry';
 let localIdCounter = 0;
@@ -46,6 +54,17 @@ export default function PantryPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [sortByExpiry, setSortByExpiry] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showConvert, setShowConvert] = useState(null);
+  const [convertQty, setConvertQty] = useState('');
+  const [convertFrom, setConvertFrom] = useState('');
+  const [convertTo, setConvertTo] = useState('');
+
+  const convertUnit = (item) => {
+    const conv = unitConversions[item.unit];
+    if (!conv) return null;
+    const targetUnits = Object.keys(conv);
+    return { item, targetUnits };
+  };
 
   useEffect(() => { loadItems(); }, []);
 
@@ -104,6 +123,30 @@ export default function PantryPage() {
 
   const confirmDelete = (id) => setConfirmDeleteId(id);
   const cancelDelete = () => setConfirmDeleteId(null);
+
+  const applyConvert = (item) => {
+    const conv = unitConversions[item.unit];
+    if (!conv || !convertTo || !convertQty) return;
+    const factor = conv[convertTo];
+    if (!factor) return;
+    const result = parseFloat(convertQty) * factor;
+    const newItem = { ...item, quantity: String(result), unit: convertTo };
+    handleEditSubmit(newItem);
+    setShowConvert(null);
+    showToast(`Convertido: ${convertQty} ${item.unit} = ${result} ${convertTo}`);
+  };
+
+  const handleEditSubmit = async (item) => {
+    try {
+      if (typeof item.id === 'string' && item.id.startsWith('local_')) {
+        const local = getLocalPantry().map(m => m.id === item.id ? item : m);
+        saveLocalPantry(local);
+      } else {
+        await api.updatePantryItem(item.id, item);
+      }
+      loadItems();
+    } catch (e) { alert(e.message); }
+  };
 
   const handleEdit = (item) => {
     setForm({ name: item.name, category: item.category, quantity: item.quantity, unit: item.unit, expiry_date: item.expiry_date || '', notes: item.notes || '' });
@@ -185,7 +228,12 @@ export default function PantryPage() {
 
         <div className="flex gap-2">
           <button onClick={() => { handleEdit(selectedItem); setSelectedItem(null); }} className="neo-btn-primary flex-1">{t('common.edit')}</button>
-           <button onClick={() => { confirmDelete(selectedItem.id); setSelectedItem(null); }} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 flex-1">{t('common.delete')}</button>
+          {selectedItem.unit && unitConversions[selectedItem.unit] && (
+            <button onClick={() => { setShowConvert(selectedItem); setConvertQty(selectedItem.quantity); setConvertFrom(selectedItem.unit); setConvertTo(Object.keys(unitConversions[selectedItem.unit])[0]); }} className="neo-btn !bg-blue-50 !text-blue-700 !border-blue-400 flex-1">
+              <span className="material-symbols-outlined text-sm align-text-bottom">swap_horiz</span> Convertir
+            </button>
+          )}
+          <button onClick={() => { confirmDelete(selectedItem.id); setSelectedItem(null); }} className="neo-btn !bg-red-50 !text-red-600 !border-red-300 flex-1">{t('common.delete')}</button>
         </div>
       </div>
     );
@@ -220,7 +268,33 @@ export default function PantryPage() {
         </button>
       </div>
 
-
+      {(() => {
+        const expiring = items.filter(i => i.expiry_date && isExpiringSoon(i.expiry_date));
+        if (expiring.length === 0) return null;
+        const expiringNames = expiring.map(i => i.name);
+        const suggestions = RECIPE_DB.filter(r => r.ingredients?.some(ing => expiringNames.some(en => ing.toLowerCase().includes(en.toLowerCase()) || en.toLowerCase().includes(ing.toLowerCase())))).slice(0, 3);
+        return (
+          <div className="neo-card !bg-orange-50 !border-orange-400 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-orange-600">warning</span>
+              <p className="font-bold text-sm text-orange-800">{expiring.length} producto{expiring.length > 1 ? 's' : ''} próximo{expiring.length > 1 ? 's' : ''} a caducar</p>
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {expiring.map(i => <span key={i.id} className="text-xs bg-orange-100 border border-orange-300 rounded-lg px-2 py-0.5 font-medium text-orange-700">{i.name}</span>)}
+            </div>
+            {suggestions.length > 0 && (
+              <>
+                <p className="text-xs font-bold text-orange-700 mb-1">Recetas que puedes hacer:</p>
+                <div className="flex flex-wrap gap-1">
+                  {suggestions.map(r => (
+                    <span key={r.id} className="text-xs bg-white border border-orange-300 rounded-lg px-2 py-0.5 font-medium text-gray-700">{r.name}</span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center" onClick={() => setShowForm(false)}>
@@ -306,6 +380,33 @@ export default function PantryPage() {
             <div className="flex gap-2">
               <button onClick={cancelDelete} className="neo-btn !bg-gray-100 flex-1">{t('common.cancel')}</button>
               <button onClick={() => handleDelete(confirmDeleteId)} className="neo-btn !bg-red-500 !text-white flex-1">{t('common.accept')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConvert && (
+        <div className="fixed inset-0 bg-black/40 z-[70] flex items-end justify-center" onClick={() => setShowConvert(null)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-14 border-t-2 border-black" onClick={e => e.stopPropagation()}>
+            <h3 className="font-extrabold text-base mb-4">Convertir {showConvert.name}</h3>
+            <div className="space-y-3">
+              <div className="flex gap-2 items-center">
+                <input className="neo-input w-24" type="number" value={convertQty} onChange={e => setConvertQty(e.target.value)} />
+                <span className="font-bold text-sm">{showConvert.unit}</span>
+              </div>
+              <div className="flex justify-center">
+                <span className="material-symbols-outlined text-gray-400">arrow_downward</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input className="neo-input w-24" type="number" value={convertQty ? parseFloat(convertQty) * (unitConversions[convertFrom]?.[convertTo] || 0) : ''} readOnly />
+                <select className="neo-input flex-1" value={convertTo} onChange={e => setConvertTo(e.target.value)}>
+                  {Object.keys(unitConversions[showConvert.unit] || {}).map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => applyConvert(showConvert)} className="neo-btn-primary flex-1">Aplicar</button>
+                <button onClick={() => setShowConvert(null)} className="neo-btn !bg-gray-100 flex-1">Cancelar</button>
+              </div>
             </div>
           </div>
         </div>

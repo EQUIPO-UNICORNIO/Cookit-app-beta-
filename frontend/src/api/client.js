@@ -18,6 +18,8 @@ export const api = {
   me: () => request('/auth/me'),
   updateAvatar: (avatar) => request('/auth/avatar', { method: 'PUT', body: JSON.stringify({ avatar }) }),
   updateUser: (data) => request('/auth/update', { method: 'PUT', body: JSON.stringify(data) }),
+  changePassword: (oldPassword, newPassword) => request('/auth/change-password', { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) }),
+  deleteAccount: () => request('/auth/account', { method: 'DELETE' }),
   resetDev: (email, password) => request('/auth/reset-dev', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
   // Pantry

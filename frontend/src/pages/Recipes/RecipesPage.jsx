@@ -1,52 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
+import RECIPE_DB from '../../data/recipeDb';
 
-const RECIPE_DB = [
-  { id: 'r1', name: 'Tortilla francesa', category: 'desayuno', time: '5 min', difficulty: 'Fácil', ingredients: ['Huevos', 'Sal', 'Aceite de oliva'], instructions: '1. Bate los huevos con sal.\n2. Calienta aceite en una sartén antiadherente.\n3. Vierte los huevos y deja cuajar.\n4. Cuando la base esté firme, dobla por la mitad.\n5. Sirve inmediatamente.', videoUrl: 'https://www.youtube.com/embed/weFUTzk1nJE' },
-  { id: 'r2', name: 'Huevos revueltos', category: 'desayuno', time: '5 min', difficulty: 'Fácil', ingredients: ['Huevos', 'Leche', 'Mantequilla', 'Sal', 'Pimienta'], instructions: '1. Bate los huevos con un poco de leche.\n2. Derrite la mantequilla en una sartén.\n3. Vierte los huevos y remueve suavemente.\n4. Cocina a fuego bajo hasta que cuajen.\n5. Sazona con sal y pimienta.', videoUrl: 'https://www.youtube.com/embed/o1JGxbhAGeA' },
-  { id: 'r3', name: 'Tostada con tomate', category: 'desayuno', time: '5 min', difficulty: 'Fácil', ingredients: ['Pan', 'Tomate', 'Aceite de oliva', 'Sal', 'Jamón'], instructions: '1. Tuesta las rebanadas de pan.\n2. Corta un tomate por la mitad.\n3. Restriega el tomate sobre el pan tostado.\n4. Añade aceite de oliva y sal.\n5. Coloca una loncha de jamón encima.', videoUrl: 'https://www.youtube.com/embed/T3ZRoZOh7Jc' },
-  { id: 'r4', name: 'Ensalada César', category: 'almuerzo', time: '20 min', difficulty: 'Fácil', ingredients: ['Lechuga', 'Pollo', 'Pan', 'Queso parmesano', 'Aceite de oliva', 'Limón', 'Ajo', 'Mostaza'], instructions: '1. Cocina el pollo a la plancha y corta en tiras.\n2. Corta el pan en cubos y tuéstalos en el horno.\n3. Prepara el aliño con aceite, limón, ajo y mostaza.\n4. Mezcla la lechuga con el pollo y los crutones.\n5. Añade el aliño y queso parmesano rallado.', videoUrl: 'https://www.youtube.com/embed/D_oiRz1AFGM' },
-  { id: 'r5', name: 'Arroz blanco', category: 'comida', time: '20 min', difficulty: 'Fácil', ingredients: ['Arroz', 'Agua', 'Aceite de oliva', 'Sal', 'Ajo'], instructions: '1. Sofríe el ajo picado en aceite.\n2. Añade el arroz y remueve 1 minuto.\n3. Agrega el doble de agua que de arroz.\n4. Cocina a fuego bajo 18 minutos.\n5. Deja reposar 5 minutos antes de servir.', videoUrl: 'https://www.youtube.com/embed/f1_MW-K6HF8' },
-  { id: 'r6', name: 'Lentejas estofadas', category: 'comida', time: '45 min', difficulty: 'Media', ingredients: ['Lentejas', 'Zanahoria', 'Patata', 'Cebolla', 'Ajo', 'Tomate', 'Pimentón', 'Aceite de oliva', 'Sal'], instructions: '1. Sofríe la cebolla, ajo y zanahoria picados.\n2. Añade el tomate y el pimentón.\n3. Incorpora las lentejas lavadas y la patata.\n4. Cubre con agua y sazona con sal.\n5. Cocina 40 minutos a fuego medio.', videoUrl: 'https://www.youtube.com/embed/mSg3O3DkodI' },
-  { id: 'r7', name: 'Puré de patatas', category: 'comida', time: '30 min', difficulty: 'Fácil', ingredients: ['Patatas', 'Leche', 'Mantequilla', 'Sal', 'Nuez moscada', 'Pimienta'], instructions: '1. Pela y corta las patatas en trozos.\n2. Hiérvelas en agua con sal hasta que estén tiernas.\n3. Escurre y aplasta las patatas.\n4. Añade mantequilla y leche caliente.\n5. Sazona con nuez moscada y pimienta.', videoUrl: 'https://www.youtube.com/embed/ZSN2upXOYPg' },
-];
-
-const ingredientCategories = {
-  'Proteínas': [
-    'Pollo', 'Ternera', 'Cerdo', 'Carne picada', 'Pavo', 'Jamón', 'Salchichas',
-    'Salmón', 'Pescado blanco', 'Merluza', 'Atún en lata', 'Sardinas', 'Gambas',
-    'Huevos',
-  ],
-  'Frutas y Verduras': [
-    'Tomate', 'Cebolla', 'Ajo', 'Pimiento', 'Zanahoria', 'Calabacín', 'Berenjena', 'Calabaza',
-    'Lechuga', 'Espinacas', 'Col', 'Judías verdes', 'Champiñones', 'Pepino', 'Brócoli',
-    'Patatas', 'Aguacate',
-    'Plátano', 'Manzana', 'Fresas', 'Limón', 'Naranja', 'Uvas', 'Pera', 'Melón', 'Sandía', 'Kiwi',
-  ],
-  'Lácteos': [
-    'Leche', 'Yogur natural', 'Queso', 'Queso cheddar', 'Queso parmesano', 'Queso mozzarella',
-    'Nata', 'Mantequilla', 'Crema agria', 'Requesón',
-  ],
-  'Hidratos': [
-    'Arroz', 'Pasta', 'Macarrones', 'Espaguetis', 'Pan', 'Pan de hamburguesa', 'Pan rallado',
-    'Tortillas de trigo', 'Tortillas de maíz', 'Harina', 'Avena', 'Granola',
-    'Lentejas', 'Garbanzos', 'Alubias', 'Garrofón', 'Quinoa', 'Cuscús',
-    'Maíz dulce',
-  ],
-  'Conservas': [
-    'Tomate triturado', 'Tomate frito', 'Caldo de pollo', 'Caldo de verduras',
-    'Aceitunas', 'Pimientos asados', 'Alcachofas en conserva',
-  ],
-  'Condimentos': [
-    'Aceite de oliva', 'Sal', 'Pimienta', 'Vinagre', 'Mostaza', 'Ketchup', 'Mayonesa', 'Miel',
-    'Perejil', 'Albahaca', 'Cilantro', 'Eneldo', 'Azafrán', 'Comino', 'Pimentón', 'Pimentón picante',
-    'Orégano', 'Nuez moscada', 'Jengibre', 'Canela', 'Laurel', 'Tomillo', 'Romero', 'Curry',
-    'Semillas de sésamo', 'Frutos secos', 'Mantequilla de cacahuete', 'Cacao',
-  ],
-};
-
-const PANTRY_INGREDIENTS = Object.values(ingredientCategories).flat();
+const recipesWithIds = RECIPE_DB.map((r, i) => ({ ...r, id: `r${i}` }));
 
 const categories = ['Todas', 'desayuno', 'almuerzo', 'comida', 'cena'];
 const difficulties = ['Todas', 'Fácil', 'Media', 'Difícil'];
@@ -80,7 +37,7 @@ export default function RecipesPage() {
 
   useEffect(() => {
     loadPantry();
-    setRecipes(RECIPE_DB);
+    setRecipes(recipesWithIds);
   }, []);
 
   const loadPantry = async () => {
@@ -161,7 +118,7 @@ export default function RecipesPage() {
       await api.addMeal({
         name: recipe.name,
         day: '',
-        meal_type: recipe.category,
+        meal_type: recipe.category || 'comida',
         recipe: recipe.name,
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
@@ -195,18 +152,22 @@ export default function RecipesPage() {
               <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{selectedRecipe.name}</h1>
               <div className="flex gap-2 mt-2 flex-wrap">
                 <span className="text-xs font-bold text-primary-600 uppercase bg-primary-50 px-2 py-0.5 rounded-lg border border-primary-200">
-                  {selectedRecipe.category}
+                  {selectedRecipe.category || 'comida'}
                 </span>
-                <span className="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs">schedule</span> {selectedRecipe.time}
-                </span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 ${
-                  selectedRecipe.difficulty === 'Fácil' ? 'text-green-600 bg-green-50 border-green-200' :
-                  selectedRecipe.difficulty === 'Media' ? 'text-orange-600 bg-orange-50 border-orange-200' :
-                  'text-red-600 bg-red-50 border-red-200'
-                }`}>
-                  <span className="material-symbols-outlined text-xs">fitness_center</span> {selectedRecipe.difficulty}
-                </span>
+                {selectedRecipe.time && (
+                  <span className="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">schedule</span> {selectedRecipe.time}
+                  </span>
+                )}
+                {selectedRecipe.difficulty && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 ${
+                    selectedRecipe.difficulty === 'Fácil' ? 'text-green-600 bg-green-50 border-green-200' :
+                    selectedRecipe.difficulty === 'Media' ? 'text-orange-600 bg-orange-50 border-orange-200' :
+                    'text-red-600 bg-red-50 border-red-200'
+                  }`}>
+                    <span className="material-symbols-outlined text-xs">fitness_center</span> {selectedRecipe.difficulty}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -430,11 +391,11 @@ export default function RecipesPage() {
                       </span>
                     </div>
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                      {recipe.time && <span className="text-xs text-gray-400 flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-xs">schedule</span> {recipe.time}
-                      </span>
-                      <span className="text-xs text-gray-400">{recipe.difficulty}</span>
-                      <span className="text-xs text-gray-400 capitalize">{recipe.category}</span>
+                      </span>}
+                      {recipe.difficulty && <span className="text-xs text-gray-400">{recipe.difficulty}</span>}
+                      <span className="text-xs text-gray-400 capitalize">{recipe.category || 'comida'}</span>
                     </div>
                   </div>
                 </div>
