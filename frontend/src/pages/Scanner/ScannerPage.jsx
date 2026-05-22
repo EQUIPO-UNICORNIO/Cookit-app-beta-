@@ -66,8 +66,12 @@ function isProductLine(line) {
   // Descartar si no tiene letras
   if (!/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ]/.test(name)) return false;
 
-  // Descartar codigos mixtos como "tpv3" "caje1698" "tda"
-  const mixto = name.split(/\s+/).filter(w => /\d/.test(w) && /[a-z]/i.test(w) && w.length > 3);
+  // Descartar codigos mixtos como "tpv3" "caje1698" "tda" (pero permitir pesos como "255gr", "1kg")
+  const mixto = name.split(/\s+/).filter(w => {
+    if (!/\d/.test(w) || !/[a-z]/i.test(w) || w.length <= 3) return false;
+    if (/^\d{1,4}\s*(kg|g|l|ml|gr|k|mg|cl|dl)$/i.test(w.trim())) return false;
+    return true;
+  });
   if (mixto.length > 0) return false;
 
   // Descartar lineas con mas digitos que letras (codigos de barras, referencias)
@@ -230,15 +234,23 @@ export default function ScannerPage() {
       }
 
       const lines = text.split('\n').filter(l => l.trim());
+      const matchedLines = new Set();
       let items = [];
       for (const line of lines) {
         const product = parseLineToProduct(line);
-        if (product) items.push(product);
+        if (product) {
+          items.push(product);
+          matchedLines.add(normalize(line));
+        }
         if (items.length >= 50) break;
       }
 
-      if (items.length === 0) {
-        items = fallbackParseLines(text);
+      const fallbackItems = fallbackParseLines(text);
+      for (const fb of fallbackItems) {
+        if (!items.some(i => normalize(i.name) === normalize(fb.name))) {
+          items.push(fb);
+        }
+        if (items.length >= 50) break;
       }
 
       if (items.length === 0) {
