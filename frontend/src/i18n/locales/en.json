@@ -112,7 +112,8 @@
     "deleteAccount": "Delete account",
     "deleteAccountDesc": "Delete all your data",
     "confirmDeleteTitle": "Delete account?",
-    "confirmDeleteDesc": "All your data will be permanently deleted. This action cannot be undone."
+    "confirmDeleteDesc": "All your data will be permanently deleted. This action cannot be undone.",
+    "updatePassword": "Update your password"
   },
   "meals": {
     "title": "My Meals",

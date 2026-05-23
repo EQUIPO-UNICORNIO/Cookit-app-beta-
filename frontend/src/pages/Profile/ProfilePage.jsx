@@ -194,7 +194,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="font-bold text-sm">{t('profile.changePassword')}</p>
-              <p className="text-xs text-gray-500">Actualiza tu contraseña</p>
+              <p className="text-xs text-gray-500">{t('profile.updatePassword')}</p>
             </div>
           </div>
         </div>

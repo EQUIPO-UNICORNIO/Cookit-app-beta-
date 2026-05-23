@@ -112,7 +112,8 @@
     "deleteAccount": "Eliminar cuenta",
     "deleteAccountDesc": "Borrar todos tus datos",
     "confirmDeleteTitle": "¿Eliminar cuenta?",
-    "confirmDeleteDesc": "Todos tus datos se borrarán permanentemente. Esta acción no se puede deshacer."
+    "confirmDeleteDesc": "Todos tus datos se borrarán permanentemente. Esta acción no se puede deshacer.",
+    "updatePassword": "Actualiza tu contraseña"
   },
   "meals": {
     "title": "Mis Menús",
