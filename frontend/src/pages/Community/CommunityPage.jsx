@@ -209,7 +209,16 @@ export default function CommunityPage() {
           className="w-full rounded-xl border-2 border-gray-200 p-3 text-sm font-medium resize-none min-h-[80px] focus:outline-none focus:border-primary-500"
         />
         <div className="flex gap-2 mt-2">
-          <input className="neo-input flex-1 text-xs" placeholder={t('community.ingredientsPlaceholder')} value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
+          <div className="flex-1">
+            <input className="neo-input w-full text-xs" placeholder={t('community.ingredientsPlaceholder')} value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
+            {newIngredients.trim() && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {parseIngredients(newIngredients).map((ing, i) => (
+                  <span key={i} className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium">{ing}</span>
+                ))}
+              </div>
+            )}
+          </div>
           <button type="button" onClick={() => fileInputRef.current?.click()} className="neo-btn !py-1.5 !px-3 !text-xs !border-secondary-300 text-secondary-600">
             <span className="material-symbols-outlined text-sm align-text-bottom">photo_camera</span>
           </button>
@@ -336,7 +345,16 @@ export default function CommunityPage() {
             </div>
             <form onSubmit={handleEditSubmit} className="space-y-3">
               <textarea className="neo-input min-h-[80px]" value={editContent} onChange={e => setEditContent(e.target.value)} required />
-              <input className="neo-input text-xs" placeholder={t('community.ingredientsPlaceholder')} value={editIngredients} onChange={e => setEditIngredients(e.target.value)} />
+              <div>
+                <input className="neo-input w-full text-xs" placeholder={t('community.ingredientsPlaceholder')} value={editIngredients} onChange={e => setEditIngredients(e.target.value)} />
+                {editIngredients.trim() && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {parseIngredients(editIngredients).map((ing, i) => (
+                      <span key={i} className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium">{ing}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => editPhotoInputRef.current?.click()} className="neo-btn !py-1.5 !px-3 !text-xs">
                   <span className="material-symbols-outlined text-sm align-text-bottom">add_photo_alternate</span> {editPhoto ? t('community.changePhoto') : t('community.addPhoto')}

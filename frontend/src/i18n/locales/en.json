@@ -100,7 +100,7 @@
     "dishName": "Dish name",
     "recipeName": "Recipe name",
     "noDay": "No day",
-    "ingredientsPlaceholder": "Ingredients (separated by comma)",
+    "ingredientsPlaceholder": "Ingredients (separated by space)",
     "instructionsPlaceholder": "Instructions (one step per line)",
     "backToMeals": "Back to meals",
     "day": "Day",
@@ -232,7 +232,7 @@
   "community": {
     "title": "Community",
     "shareRecipe": "What recipe do you want to share?",
-    "ingredientsPlaceholder": "Ingredients (separated by comma)",
+    "ingredientsPlaceholder": "Ingredients (separated by space)",
     "instructionsPlaceholder": "Instructions / steps (one per line)",
     "publish": "Publish",
     "saving": "Saving...",
