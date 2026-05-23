@@ -86,7 +86,7 @@ export default function CommunityPage() {
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
   const translateCache = useRef({});
 
-  useEffect(() => { loadPosts(); }, []);
+  useEffect(() => { loadPosts(); }, [i18n.language]);
 
   useEffect(() => {
     if (posts.length === 0) return;
@@ -95,7 +95,7 @@ export default function CommunityPage() {
       return;
     }
     translatePosts();
-  }, [i18n.language, posts.length]);
+  }, [i18n.language, posts]);
 
   const translatePosts = async () => {
     const needTranslate = posts.filter(p => !translateCache.current[p.id]);
@@ -105,16 +105,27 @@ export default function CommunityPage() {
     }
     const results = await Promise.all(needTranslate.map(async (post) => {
       try {
-        const [contentRes, ingredientsRes, instructionsRes] = await Promise.all([
-          api.translateText(post.content, 'en'),
-          api.translateText(post.ingredients?.join(', ') || '', 'en'),
-          post.instructions ? api.translateText(post.instructions, 'en') : Promise.resolve({ translated: '' }),
-        ]);
-        const translated = {
-          content: contentRes.translated,
-          ingredients: ingredientsRes.translated.split(',').map(i => i.trim()).filter(Boolean),
-          instructions: instructionsRes.translated || post.instructions,
-        };
+        let translatedContent = post.content;
+        let translatedIngredients = post.ingredients;
+        let translatedInstructions = post.instructions;
+        try {
+          const contentRes = await api.translateText(post.content, 'en');
+          if (contentRes?.translated) translatedContent = contentRes.translated;
+        } catch {}
+        try {
+          const text = Array.isArray(post.ingredients) ? post.ingredients.join(', ') : (post.ingredients || '');
+          if (text) {
+            const ingRes = await api.translateText(text, 'en');
+            if (ingRes?.translated) translatedIngredients = ingRes.translated.split(',').map(i => i.trim()).filter(Boolean);
+          }
+        } catch {}
+        try {
+          if (post.instructions) {
+            const instRes = await api.translateText(post.instructions, 'en');
+            if (instRes?.translated) translatedInstructions = instRes.translated;
+          }
+        } catch {}
+        const translated = { content: translatedContent, ingredients: translatedIngredients, instructions: translatedInstructions };
         translateCache.current[post.id] = translated;
         return { id: post.id, ...translated };
       } catch { return null; }
