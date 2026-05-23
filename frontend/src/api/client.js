@@ -77,6 +77,4 @@ export const api = {
   // YouTube
   searchYoutube: (q) => request(`/youtube/search?q=${encodeURIComponent(q)}`),
 
-  // Translate
-  translateText: (text, targetLang) => request('/translate', { method: 'POST', body: JSON.stringify({ text, targetLang }) }),
 };

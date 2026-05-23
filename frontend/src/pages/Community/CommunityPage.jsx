@@ -57,11 +57,8 @@ function AvatarDisplay({ avatar, name, size = 'md' }) {
 
 export default function CommunityPage() {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState([]);
-  const [translatedPosts, setTranslatedPosts] = useState(null);
-  const translatingRef = useRef(false);
-  const langRef = useRef(i18n.language);
   const [newPost, setNewPost] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
   const [newIngredients, setNewIngredients] = useState([]);
@@ -84,57 +81,8 @@ export default function CommunityPage() {
   const newIngredientRef = useRef(null);
   const editIngredientRef = useRef(null);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
-  const translateCache = useRef({});
 
-  useEffect(() => { loadPosts(); }, [i18n.language]);
-
-  useEffect(() => {
-    if (posts.length === 0) return;
-    if (i18n.language === 'es') {
-      setTranslatedPosts(null);
-      return;
-    }
-    translatePosts();
-  }, [i18n.language, posts]);
-
-  const translatePosts = async () => {
-    const needTranslate = posts.filter(p => !translateCache.current[p.id]);
-    if (needTranslate.length === 0) {
-      setTranslatedPosts(posts.map(p => translateCache.current[p.id] ? { ...p, ...translateCache.current[p.id] } : p));
-      return;
-    }
-    const results = await Promise.all(needTranslate.map(async (post) => {
-      try {
-        let translatedContent = post.content;
-        let translatedIngredients = post.ingredients;
-        let translatedInstructions = post.instructions;
-        try {
-          const contentRes = await api.translateText(post.content, 'en');
-          if (contentRes?.translated) translatedContent = contentRes.translated;
-        } catch {}
-        try {
-          const text = Array.isArray(post.ingredients) ? post.ingredients.join(', ') : (post.ingredients || '');
-          if (text) {
-            const ingRes = await api.translateText(text, 'en');
-            if (ingRes?.translated) translatedIngredients = ingRes.translated.split(',').map(i => i.trim()).filter(Boolean);
-          }
-        } catch {}
-        try {
-          if (post.instructions) {
-            const instRes = await api.translateText(post.instructions, 'en');
-            if (instRes?.translated) translatedInstructions = instRes.translated;
-          }
-        } catch {}
-        const translated = { content: translatedContent, ingredients: translatedIngredients, instructions: translatedInstructions };
-        translateCache.current[post.id] = translated;
-        return { id: post.id, ...translated };
-      } catch { return null; }
-    }));
-    results.filter(Boolean).forEach(r => { translateCache.current[r.id] = r; });
-    setTranslatedPosts(posts.map(p => translateCache.current[p.id] ? { ...p, ...translateCache.current[p.id] } : p));
-  };
-
-  const displayPosts = translatedPosts || posts;
+  useEffect(() => { loadPosts(); }, []);
 
   const loadPosts = async () => {
     try { setPosts(await api.getPosts()); } catch (e) { console.error(e); }
@@ -323,8 +271,8 @@ export default function CommunityPage() {
       </form>
 
       <div className="space-y-3">
-        {displayPosts.map(post => (
-          <div key={post.id} className="neo-card cursor-pointer" onClick={() => setViewingPost(translateCache.current[post.id] ? { ...post, ...translateCache.current[post.id] } : post)}>
+        {posts.map(post => (
+          <div key={post.id} className="neo-card cursor-pointer" onClick={() => setViewingPost(post)}>
             <div className="flex items-center gap-3 mb-2">
               <AvatarDisplay avatar={post.user_avatar} name={post.user_name} />
               <div className="flex-1 min-w-0">
@@ -518,7 +466,7 @@ export default function CommunityPage() {
           </div>
         </div>
       )}
-      {displayPosts.length === 0 && (
+      {posts.length === 0 && (
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-5xl text-gray-300">forum</span>
           <p className="text-gray-400 font-bold mt-2">{t('community.firstToPost')}</p>
