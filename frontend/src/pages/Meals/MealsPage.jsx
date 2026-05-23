@@ -1,21 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useTranslation } from 'react-i18next';
 
 const mealTypes = ['desayuno', 'almuerzo', 'comida', 'merienda', 'cena'];
 
 const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-const suggestions = [
-  { name: 'Tortilla francesa', meal_type: 'desayuno', recipe: 'Tortilla francesa', ingredients: ['Huevos', 'Sal', 'Aceite de oliva'], instructions: '1. Bate los huevos con sal.\n2. Calienta aceite en una sartén antiadherente.\n3. Vierte los huevos y deja cuajar.\n4. Cuando la base esté firme, dobla por la mitad.\n5. Sirve inmediatamente.' },
-  { name: 'Huevos revueltos', meal_type: 'desayuno', recipe: 'Huevos revueltos', ingredients: ['Huevos', 'Leche', 'Mantequilla', 'Sal', 'Pimienta'], instructions: '1. Bate los huevos con un poco de leche.\n2. Derrite la mantequilla en una sartén.\n3. Vierte los huevos y remueve suavemente.\n4. Cocina a fuego bajo hasta que cuajen.\n5. Sazona con sal y pimienta.' },
-  { name: 'Tostada con tomate', meal_type: 'desayuno', recipe: 'Tostada con tomate', ingredients: ['Pan', 'Tomate', 'Aceite de oliva', 'Sal', 'Jamón'], instructions: '1. Tuesta las rebanadas de pan.\n2. Corta un tomate por la mitad.\n3. Restriega el tomate sobre el pan tostado.\n4. Añade aceite de oliva y sal.\n5. Coloca una loncha de jamón encima.' },
-  { name: 'Ensalada César', meal_type: 'almuerzo', recipe: 'Ensalada César', ingredients: ['Lechuga', 'Pollo', 'Pan', 'Queso parmesano', 'Aceite de oliva', 'Limón', 'Ajo', 'Mostaza'], instructions: '1. Cocina el pollo a la plancha y corta en tiras.\n2. Corta el pan en cubos y tuéstalos en el horno.\n3. Prepara el aliño con aceite, limón, ajo y mostaza.\n4. Mezcla la lechuga con el pollo y los crutones.\n5. Añade el aliño y queso parmesano rallado.' },
-  { name: 'Arroz blanco', meal_type: 'comida', recipe: 'Arroz blanco', ingredients: ['Arroz', 'Agua', 'Aceite de oliva', 'Sal', 'Ajo'], instructions: '1. Sofríe el ajo picado en aceite.\n2. Añade el arroz y remueve 1 minuto.\n3. Agrega el doble de agua que de arroz.\n4. Cocina a fuego bajo 18 minutos.\n5. Deja reposar 5 minutos antes de servir.' },
-  { name: 'Lentejas estofadas', meal_type: 'comida', recipe: 'Lentejas estofadas', ingredients: ['Lentejas', 'Zanahoria', 'Patata', 'Cebolla', 'Ajo', 'Tomate', 'Pimentón', 'Aceite de oliva', 'Sal'], instructions: '1. Sofríe la cebolla, ajo y zanahoria picados.\n2. Añade el tomate y el pimentón.\n3. Incorpora las lentejas lavadas y la patata.\n4. Cubre con agua y sazona con sal.\n5. Cocina 40 minutos a fuego medio.' },
-  { name: 'Puré de patatas', meal_type: 'comida', recipe: 'Puré de patatas', ingredients: ['Patatas', 'Leche', 'Mantequilla', 'Sal', 'Nuez moscada', 'Pimienta'], instructions: '1. Pela y corta las patatas en trozos.\n2. Hiérvelas en agua con sal hasta que estén tiernas.\n3. Escurre y aplasta las patatas.\n4. Añade mantequilla y leche caliente.\n5. Sazona con nuez moscada y pimienta.' },
-];
 
 const LOCAL_KEY = 'cookit_meals';
 let localIdCounter = 0;
@@ -33,7 +22,6 @@ function normalize(s) {
 }
 
 export default function MealsPage() {
-  const location = useLocation();
   const { t } = useTranslation();
   const [meals, setMeals] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -54,22 +42,6 @@ export default function MealsPage() {
 
   useEffect(() => { loadMeals(); }, []);
 
-  useEffect(() => {
-    if (location.state?.suggestedMeal) {
-      const meal = location.state.suggestedMeal;
-      setForm({
-        name: meal.name || '',
-        day: '',
-        meal_type: meal.meal_type || 'comida',
-        recipe: meal.recipe || '',
-        ingredients: (meal.ingredients || []).join(', '),
-        instructions: meal.instructions || '',
-      });
-      setShowForm(true);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-
   const loadMeals = async () => {
     let apiMeals = [];
     try { apiMeals = await api.getMeals(); } catch (e) { console.error(e); }
@@ -82,11 +54,6 @@ export default function MealsPage() {
       localIdCounter = Math.max(...local.map(m => parseInt(m.id.replace('local_', '')) || 0), 0) + 1;
     }
     setMeals(merged);
-  };
-
-  const generateSuggestion = () => {
-    const s = suggestions[Math.floor(Math.random() * suggestions.length)];
-    setForm(prev => ({ ...prev, name: s.name, day: selectedDay, meal_type: s.meal_type, recipe: s.recipe, ingredients: s.ingredients.join(', '), instructions: s.instructions || '' }));
   };
 
   const showToast = (msg) => {
@@ -338,9 +305,6 @@ export default function MealsPage() {
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-gray-300">restaurant_menu</span>
           <p className="text-gray-400 font-bold mt-2">{t('meals.noMealsForDay')} {selectedDay === 'todas' ? t('meals.selectedDay') : t('meals.days.' + selectedDay)}</p>
-          <button onClick={() => { setShowForm(true); setForm({ ...form, day: selectedDay }); generateSuggestion(); }} className="neo-btn-primary !py-2 !px-4 !text-sm mt-3">
-            {t('meals.suggestMeal')}
-          </button>
         </div>
       )}
 
@@ -403,9 +367,6 @@ export default function MealsPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-extrabold">{editing ? t('meals.editMenu') : t('meals.newMenu')}</h2>
               <div className="flex gap-1">
-                <button onClick={generateSuggestion} className="text-xs font-bold text-primary-600 neo-btn !py-1 !px-3 !border-primary-300">
-                  {t('meals.suggestion')}
-                </button>
                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={ocrLoading}
                   className="text-xs font-bold neo-btn !py-1 !px-3 !border-secondary-300 text-secondary-600">
                   <span className="material-symbols-outlined text-sm align-text-bottom">{ocrLoading ? 'hourglass_top' : 'photo_camera'}</span> {t('common.photo')}
