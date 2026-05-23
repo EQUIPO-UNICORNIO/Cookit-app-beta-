@@ -15,20 +15,12 @@ function getFallbackColor(name) {
   return fallbackColors[Math.abs(hash) % fallbackColors.length];
 }
 
-const parseIngredients = (str) => str.split(/[\s,]+/).filter(Boolean);
-
 function normalizeIngredients(data) {
   if (!data) return [];
-  if (Array.isArray(data)) {
-    const flat = data.flatMap(i => {
-      if (typeof i === 'string') return parseIngredients(i);
-      return [];
-    });
-    return flat;
-  }
+  if (Array.isArray(data)) return data.filter(Boolean);
   if (typeof data === 'string') {
     try { return JSON.parse(data); } catch {}
-    return parseIngredients(data);
+    return [data];
   }
   return [];
 }
@@ -69,7 +61,8 @@ export default function CommunityPage() {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
-  const [newIngredients, setNewIngredients] = useState('');
+  const [newIngredients, setNewIngredients] = useState([]);
+  const [newIngredientInput, setNewIngredientInput] = useState('');
   const [newInstructions, setNewInstructions] = useState('');
   const [commentText, setCommentText] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
@@ -80,10 +73,13 @@ export default function CommunityPage() {
   const [editingPost, setEditingPost] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [editPhoto, setEditPhoto] = useState('');
-  const [editIngredients, setEditIngredients] = useState('');
+  const [editIngredients, setEditIngredients] = useState([]);
+  const [editIngredientInput, setEditIngredientInput] = useState('');
   const [editInstructions, setEditInstructions] = useState('');
   const editPhotoInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const newIngredientRef = useRef(null);
+  const editIngredientRef = useRef(null);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
   useEffect(() => { loadPosts(); }, []);
@@ -117,14 +113,34 @@ export default function CommunityPage() {
     e.preventDefault();
     if (!newPost.trim()) return;
     try {
-      const data = { content: newPost, photo: newPhoto, ingredients: parseIngredients(newIngredients), instructions: newInstructions };
+      const data = { content: newPost, photo: newPhoto, ingredients: newIngredients, instructions: newInstructions };
       await api.createPost(data);
       setNewPost('');
       setNewPhoto('');
-      setNewIngredients('');
+      setNewIngredients([]);
+      setNewIngredientInput('');
       setNewInstructions('');
       loadPosts();
     } catch (e) { showToast(t('community.errorPublish')); }
+  };
+
+  const addIngredient = (list, setList, setInput) => {
+    const val = list === newIngredients ? newIngredientInput : editIngredientInput;
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    setList([...list, trimmed]);
+    setInput('');
+  };
+
+  const removeIngredient = (list, setList, index) => {
+    setList(list.filter((_, i) => i !== index));
+  };
+
+  const handleIngredientKeyDown = (e, list, setList, setInput) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addIngredient(list, setList, setInput);
+    }
   };
 
   const handleLike = async (id) => {
@@ -166,7 +182,8 @@ export default function CommunityPage() {
     setEditingPost(post);
     setEditContent(post.content);
     setEditPhoto(post.photo || '');
-    setEditIngredients((post.ingredients || []).join(' '));
+    setEditIngredients(normalizeIngredients(post.ingredients));
+    setEditIngredientInput('');
     setEditInstructions(post.instructions || '');
   };
 
@@ -177,7 +194,7 @@ export default function CommunityPage() {
       await api.updatePost(editingPost.id, {
         content: editContent,
         photo: editPhoto,
-        ingredients: parseIngredients(editIngredients),
+        ingredients: editIngredients,
         instructions: editInstructions
       });
       setEditingPost(null);
@@ -210,11 +227,21 @@ export default function CommunityPage() {
         />
         <div className="flex gap-2 mt-2">
           <div className="flex-1">
-            <input className="neo-input w-full text-xs" placeholder={t('community.ingredientsPlaceholder')} value={newIngredients} onChange={e => setNewIngredients(e.target.value)} />
-            {newIngredients.trim() && (
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {parseIngredients(newIngredients).map((ing, i) => (
-                  <span key={i} className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium">{ing}</span>
+            <div className="flex gap-2">
+              <input ref={newIngredientRef} className="neo-input flex-1 text-xs" placeholder={t('community.ingredientsPlaceholder')} value={newIngredientInput} onChange={e => setNewIngredientInput(e.target.value)} onKeyDown={e => handleIngredientKeyDown(e, newIngredients, setNewIngredients, setNewIngredientInput)} />
+              <button type="button" onClick={() => addIngredient(newIngredients, setNewIngredients, setNewIngredientInput)} className="neo-btn-primary !px-3 !text-xs">
+                <span className="material-symbols-outlined text-sm align-text-bottom">add</span>
+              </button>
+            </div>
+            {newIngredients.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {newIngredients.map((ing, i) => (
+                  <span key={i} className="text-[11px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium flex items-center gap-1">
+                    {ing}
+                    <button type="button" onClick={() => removeIngredient(newIngredients, setNewIngredients, i)} className="hover:text-red-500">
+                      <span className="material-symbols-outlined text-xs">close</span>
+                    </button>
+                  </span>
                 ))}
               </div>
             )}
@@ -346,11 +373,21 @@ export default function CommunityPage() {
             <form onSubmit={handleEditSubmit} className="space-y-3">
               <textarea className="neo-input min-h-[80px]" value={editContent} onChange={e => setEditContent(e.target.value)} required />
               <div>
-                <input className="neo-input w-full text-xs" placeholder={t('community.ingredientsPlaceholder')} value={editIngredients} onChange={e => setEditIngredients(e.target.value)} />
-                {editIngredients.trim() && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {parseIngredients(editIngredients).map((ing, i) => (
-                      <span key={i} className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium">{ing}</span>
+                <div className="flex gap-2">
+                  <input ref={editIngredientRef} className="neo-input flex-1 text-xs" placeholder={t('community.ingredientsPlaceholder')} value={editIngredientInput} onChange={e => setEditIngredientInput(e.target.value)} onKeyDown={e => handleIngredientKeyDown(e, editIngredients, setEditIngredients, setEditIngredientInput)} />
+                  <button type="button" onClick={() => addIngredient(editIngredients, setEditIngredients, setEditIngredientInput)} className="neo-btn-primary !px-3 !text-xs">
+                    <span className="material-symbols-outlined text-sm align-text-bottom">add</span>
+                  </button>
+                </div>
+                {editIngredients.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {editIngredients.map((ing, i) => (
+                      <span key={i} className="text-[11px] bg-primary-50 text-primary-700 border border-primary-200 rounded-md px-2 py-0.5 font-medium flex items-center gap-1">
+                        {ing}
+                        <button type="button" onClick={() => removeIngredient(editIngredients, setEditIngredients, i)} className="hover:text-red-500">
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                      </span>
                     ))}
                   </div>
                 )}
