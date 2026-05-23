@@ -178,8 +178,8 @@ export default function ProfilePage() {
               <span className="material-symbols-outlined text-primary-600">language</span>
             </div>
             <div className="flex-1">
-              <p className="font-bold text-sm">{t('profile.language')}</p>
-              <p className="text-xs text-gray-500">{i18n.language === 'es' ? t('profile.english') : t('profile.spanish')}</p>
+              <p className="font-bold text-sm">{t('profile.language')}: {i18n.language === 'es' ? t('profile.spanish') : t('profile.english')}</p>
+              <p className="text-xs text-gray-500">{i18n.language === 'es' ? 'Cambiar a ' + t('profile.english') : 'Switch to ' + t('profile.spanish')}</p>
             </div>
             <span className="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded-lg border border-primary-200">
               {i18n.language === 'es' ? 'ES' : 'EN'}
