@@ -299,6 +299,14 @@ export default function RecipesPage() {
             </div>
           </div>
         )}
+
+        {toast && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] pointer-events-none">
+            <div className="bg-primary-600 text-white font-bold text-sm px-5 py-3 rounded-2xl border-2 border-primary-800 shadow-lg whitespace-nowrap">
+              {toast}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
