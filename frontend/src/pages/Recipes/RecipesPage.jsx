@@ -352,15 +352,18 @@ export default function RecipesPage() {
         {showHistory && (
           <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
             {history.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No has usado ninguna receta aún</p>}
-            {history.map((entry, i) => (
-              <div key={`${entry.id}-${i}`} className="flex items-center justify-between text-sm">
-                <div>
-                  <span className="font-medium">{entry.name}</span>
-                  {entry.category && <span className="text-xs text-gray-400 ml-2">{entry.category}</span>}
+            {history.map((entry, i) => {
+              const found = recipesWithIds.find(r => r.id === entry.id);
+              return (
+                <div key={`${entry.id}-${i}`} className="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg px-2 -mx-2 py-1.5" onClick={() => found && setSelectedRecipe(found)}>
+                  <div>
+                    <span className="font-medium">{entry.name}</span>
+                    {entry.category && <span className="text-xs text-gray-400 ml-2">{entry.category}</span>}
+                  </div>
+                  <span className="text-xs text-gray-400">{entry.date}</span>
                 </div>
-                <span className="text-xs text-gray-400">{entry.date}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
