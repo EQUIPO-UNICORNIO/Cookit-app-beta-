@@ -75,6 +75,11 @@ export default function RecipesPage() {
   const [showVideoModal, setShowVideoModal] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(null);
   const [toast, setToast] = useState(null);
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem('cookit_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showHistory, setShowHistory] = useState(false);
   const videoIdCache = useRef({});
 
   const openVideo = useCallback(async (recipe) => {
@@ -191,6 +196,18 @@ export default function RecipesPage() {
     }
   };
 
+  const markAsUsed = (recipe) => {
+    if (history.some(h => h.id === recipe.id)) {
+      showToast('Ya está en tu historial');
+      return;
+    }
+    const entry = { id: recipe.id, name: recipe.name, category: recipe.category, date: new Date().toLocaleDateString('es-ES') };
+    const updated = [entry, ...history];
+    setHistory(updated);
+    localStorage.setItem('cookit_history', JSON.stringify(updated));
+    showToast('Añadido a tu historial');
+  };
+
   const filteredSuggestions = searchIngredient
     ? Object.fromEntries(
         Object.entries(ingredientCategories).map(([cat, ings]) => [
@@ -275,6 +292,10 @@ export default function RecipesPage() {
             <span className="material-symbols-outlined text-sm align-text-bottom">play_circle</span> {loadingVideo === selectedRecipe.id ? t('recipes.searching') : t('common.watchVideo')}
         </button>
 
+        <button onClick={() => markAsUsed(selectedRecipe)} className="neo-btn !bg-green-50 !text-green-700 !border-green-300 w-full mt-2">
+          <span className="material-symbols-outlined text-sm align-text-bottom">check_circle</span> Usar receta
+        </button>
+
         {showVideoModal && (
           <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-4" onClick={() => setShowVideoModal(null)}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl overflow-hidden border-2 border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
@@ -318,6 +339,30 @@ export default function RecipesPage() {
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('recipes.title')}</h1>
           <p className="text-sm text-gray-500 font-medium">{t('recipes.subtitle')}</p>
         </div>
+      </div>
+
+      <div className="neo-card mb-4 !p-3">
+        <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowHistory(!showHistory)}>
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary-600 text-sm">history</span>
+            <span className="font-bold text-sm">Historial ({history.length})</span>
+          </div>
+          <span className="material-symbols-outlined text-sm text-gray-500">{showHistory ? 'expand_less' : 'expand_more'}</span>
+        </div>
+        {showHistory && (
+          <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+            {history.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No has usado ninguna receta aún</p>}
+            {history.map((entry, i) => (
+              <div key={`${entry.id}-${i}`} className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="font-medium">{entry.name}</span>
+                  {entry.category && <span className="text-xs text-gray-400 ml-2">{entry.category}</span>}
+                </div>
+                <span className="text-xs text-gray-400">{entry.date}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {!showIngredientPicker && !searched && (
@@ -521,6 +566,9 @@ export default function RecipesPage() {
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); openVideo(recipe); }} className="text-xs font-bold neo-btn !py-1 !px-3 !bg-red-50 !text-red-600 !border-red-300" disabled={loadingVideo === recipe.id}>
                       <span className="material-symbols-outlined text-sm align-text-bottom">play_circle</span>
+                    </button>
+                  <button onClick={(e) => { e.stopPropagation(); markAsUsed(recipe); }} className="text-xs font-bold neo-btn !py-1 !px-3 !bg-green-50 !text-green-700 !border-green-300">
+                      <span className="material-symbols-outlined text-sm align-text-bottom">check_circle</span>
                     </button>
                 </div>
               </div>
