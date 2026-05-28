@@ -381,8 +381,8 @@ export default function RecipesPage() {
                 <div key={category}>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">
-                      {category === 'Proteínas' ? 'lunch_dining' :
-                       category === 'Frutas y Verduras' ? 'eco' :
+                      {category === 'Proteínas' ? 'egg' :
+                       category === 'Frutas y Verduras' ? 'forest' :
                        category === 'Lácteos' ? 'water_drop' :
                        category === 'Hidratos' ? 'bakery_dining' :
                        category === 'Conservas' ? 'inventory_2' : 'spa'}
