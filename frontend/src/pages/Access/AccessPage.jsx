@@ -40,7 +40,7 @@ export default function AccessPage() {
   const [toast, setToast] = useState(null);
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const validate = () => {
     const errors = {};
@@ -100,6 +100,10 @@ export default function AccessPage() {
 
   return (
     <div className="min-h-screen bg-page flex flex-col">
+      <button onClick={() => { const newLang = i18n.language === 'es' ? 'en' : 'es'; i18n.changeLanguage(newLang); localStorage.setItem('cookit_lang', newLang); }}
+        className="fixed top-4 right-4 z-50 neo-btn !py-1.5 !px-3 !text-xs !rounded-xl">
+        {i18n.language === 'es' ? 'EN' : 'ES'}
+      </button>
       {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       <div className="flex-1 flex flex-col justify-center px-6 max-w-sm mx-auto w-full">
