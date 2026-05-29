@@ -14,11 +14,11 @@ export default function ResetPasswordPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setReady(true);
-      }
-    });
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setReady(true);
+      return;
+    }
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setReady(true);
