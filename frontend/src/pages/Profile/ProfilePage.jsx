@@ -202,18 +202,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="neo-card !p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center border-2 border-black">
-              <span className="material-symbols-outlined text-primary-600">restaurant</span>
-            </div>
-            <div>
-              <p className="font-bold text-sm">CookIt</p>
-              <p className="text-xs text-gray-500">Smart Meal Planner v1.0</p>
-            </div>
-          </div>
-        </div>
-
         <button onClick={handleLogout} className="neo-card !p-4 w-full text-left flex items-center gap-3 !border-red-300 hover:bg-red-50">
           <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center border-2 border-red-300">
             <span className="material-symbols-outlined text-red-500">logout</span>
