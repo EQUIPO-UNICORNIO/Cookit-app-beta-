@@ -112,7 +112,7 @@ export default function AccessPage() {
             <span className="material-symbols-outlined text-4xl text-white">restaurant</span>
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">CookIt</h1>
-          <p className="text-primary-600 dark:text-primary-400 font-bold text-sm mt-2 tracking-wide">MENOS DESPERDICIO, MÁS FUTURO</p>
+          <p className="text-primary-600 dark:text-primary-400 font-bold text-sm mt-2 tracking-wide">{t('access.slogan')}</p>
           <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">{t('access.welcome')}</p>
           <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">{t('access.loginToContinue')}</p>
         </div>
