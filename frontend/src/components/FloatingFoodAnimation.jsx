@@ -1,16 +1,5 @@
 import { useEffect, useRef } from 'react';
 
-const FOODS = [
-  { draw: drawApple, name: 'apple' },
-  { draw: drawCarrot, name: 'carrot' },
-  { draw: drawSteak, name: 'steak' },
-  { draw: drawBroccoli, name: 'broccoli' },
-  { draw: drawOrange, name: 'orange' },
-  { draw: drawEgg, name: 'egg' },
-  { draw: drawBanana, name: 'banana' },
-  { draw: drawWatermelon, name: 'watermelon' },
-];
-
 function drawFace(ctx, x, y, s) {
   ctx.fillStyle = '#1a1a2e';
   ctx.beginPath();
@@ -278,6 +267,17 @@ const drawOrange = withLimbs(drawOrangeBody, '#ff9800', '#bf6a00', 0.04);
 const drawEgg = withLimbs(drawEggBody, '#fff8e1', '#d7ccc8', 0.06);
 const drawBanana = withLimbs(drawBananaBody, '#fdd835', '#b8860b', 0.04);
 const drawWatermelon = withLimbs(drawWatermelonBody, '#4caf50', '#2e7d32', 0.06);
+
+const FOODS = [
+  { draw: drawApple, name: 'apple' },
+  { draw: drawCarrot, name: 'carrot' },
+  { draw: drawSteak, name: 'steak' },
+  { draw: drawBroccoli, name: 'broccoli' },
+  { draw: drawOrange, name: 'orange' },
+  { draw: drawEgg, name: 'egg' },
+  { draw: drawBanana, name: 'banana' },
+  { draw: drawWatermelon, name: 'watermelon' },
+];
 
 export default function FloatingFoodAnimation() {
   const canvasRef = useRef(null);
