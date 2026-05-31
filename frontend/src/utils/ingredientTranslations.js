@@ -1,3 +1,5 @@
+import i18n from '../i18n/i18n';
+
 const translations = {
   'Aceite de oliva': 'Olive oil',
   'Aceitunas': 'Olives',
@@ -209,5 +211,6 @@ const translations = {
 };
 
 export function translateIngredient(name) {
+  if (i18n.language === 'es') return name;
   return translations[name] || name;
 }
